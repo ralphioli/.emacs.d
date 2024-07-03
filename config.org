@@ -1,0 +1,349 @@
+#+TITLE: Emacs Config
+#+AUTHOR: Ralph Dreijer
+#+STARTUP: content
+#+STARTUP: latexpreview
+
+* To do first
+** Load package manager
+#+begin_src emacs-lisp
+  (require 'package)
+  (require 'use-package)
+  (require 'use-package-ensure)
+
+  (setq use-package-always-ensure t)
+  (package-initialize)
+
+(add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
+#+end_src
+
+** Load scripts 
+Add scripts folder to load path:
+#+begin_src emacs-lisp
+(add-to-list 'load-path "~/.emacs.d/scripts/")
+#+end_src
+
+Source scripts:
+#+begin_src emacs-lisp
+(require 'buffer-move)
+#+end_src
+
+
+* UI and Keybindings
+** Dracula theme
+#+begin_src emacs-lisp
+  (use-package dracula-theme
+   :config
+   (load-theme 'dracula)
+  )
+#+end_src
+
+** Evil mode
+Setup vim-like keybindings using evil-mode:
+#+begin_src emacs-lisp
+(use-package evil
+  :ensure t
+  :init
+    (setq evil-undo-system 'undo-redo)
+  (setq evil-want-integration t) ;; This is optional since it's already set to t by default.
+  (setq evil-want-keybinding nil)
+  :config
+  (evil-mode 1))
+
+(use-package evil-collection
+  :after evil
+  :ensure t
+  :config
+  (evil-collection-init))
+#+end_src
+
+Add /vim-commentary/-like motions:
+#+begin_src emacs-lisp
+  (use-package evil-commentary
+  :config
+  (evil-commentary-mode)
+  )
+#+end_src
+
+Use *evil-goggles* to give visual feedback:
+#+begin_src emacs-lisp
+  (use-package evil-goggles
+    :ensure t
+    :config
+    (evil-goggles-mode)
+
+    ;; optionally use diff-mode's faces; as a result, deleted text
+    ;; will be highlighed with `diff-removed` face which is typically
+    ;; some red color (as defined by the color theme)
+    ;; other faces such as `diff-added` will be used for other actions
+    (evil-goggles-use-diff-faces)
+
+    ;; this variable affects "blocking" hints, for example when deleting - the hint is displayed,
+    ;; the deletion is delayed (blocked) until the hint disappers, then the hint is removed and the
+    ;; deletion executed; it makes sense to have this duration short
+    (setq evil-goggles-blocking-duration 0.100) ;; default is nil, i.e. use `evil-goggles-duration'
+
+    ;; this variable affects "async" hints, for example when indenting - the indentation
+    ;; is performed with the hint visible, i.e. the hint is displayed, the action (indent) is
+    ;; executed (asynchronous), then the hint is removed, highlighting the result of the indentation
+    (setq evil-goggles-async-duration 0.300) ;; default is nil, i.e. use `evil-goggles-duration'
+    )
+#+end_src
+
+#+RESULTS:
+: t
+
+** Which key
+To see what keybindings actually do...
+#+begin_src emacs-lisp
+  (use-package which-key
+  :config
+  (setq which-key-idle-delay 0)
+  (which-key-mode)
+    (which-key-setup-side-window-bottom)
+  )
+#+end_src
+
+** All the icons
+#+begin_src emacs-lisp
+(use-package all-the-icons
+  :ensure t
+  :if (display-graphic-p))
+
+(use-package all-the-icons-dired
+  :hook (dired-mode . (lambda () (all-the-icons-dired-mode t))))
+#+end_src
+
+** General keybindings
+Install general.el and define some global keybindings.
+#+begin_src emacs-lisp
+  (use-package general
+    :config
+    (general-evil-setup)
+
+    ;; set up 'SPC' as the global leader key
+    (general-create-definer my-leader-def
+      :states '(normal insert visual emacs)
+      :keymaps 'override
+      :prefix "SPC" ;; set leader
+      :global-prefix "C-SPC") ;; access leader in insert mode
+
+    (my-leader-def
+      "SPC" '(counsel-M-x :wk "Counsel M-x")
+      ;; BUFFERS
+      "b" '(:ignore t :wk "Buffers")
+      "b b" '(switch-to-buffer :wk "Switch to buffer")
+      "b i" '(ibuffer :wk "Ibuffer")
+      "b k" '(kill-current-buffer :wk "Kill this buffer")
+      "b n" '(next-buffer :wk "Next buffer")
+      "b p" '(previous-buffer :wk "Previous buffer")
+      ;; FILES
+      "f" '(:ignore t :wk "Files")
+      "f f" '(find-file :wk "Find file")
+      "f o" '(find-file-other-window :wk "Find file Other window")
+      "f r" '(counsel-recentf :wk "Recent files")
+      ;; TABS
+      "t" '(:ignore t :wk "Tabs")
+      "t c" '(tab-bar-new-tab :wk "Create new tab")
+      "t n" '(tab-bar-switch-to-next-tab :wk "Next tab")
+      "t p" '(tab-bar-switch-to-prev-tab :wk "Previous tab")
+      "t u" '(tab-bar-undo-close-tab :wk "Undo close tab")
+      "t x" '(tab-bar-close-tab :wk "Close tab")
+      ;; WINDOWS
+      "w" '(:ignore t :wk "Windows")
+      ;; Window splits
+      "w c" '(evil-window-delete :wk "Close window")
+      "w n" '(evil-window-new :wk "New window")
+      "w s" '(evil-window-split :wk "Horizontal split window")
+      "w v" '(evil-window-vsplit :wk "Vertical split window")
+      ;; Window motions
+      "w h" '(evil-window-left :wk "Window left")
+      "w j" '(evil-window-down :wk "Window down")
+      "w k" '(evil-window-up :wk "Window up")
+      "w l" '(evil-window-right :wk "Window right")
+      "w w" '(evil-window-next :wk "Goto next window")
+      ;; Move Windows
+      "w H" '(buf-move-left :wk "Buffer move left")
+      "w J" '(buf-move-down :wk "Buffer move down")
+      "w K" '(buf-move-up :wk "Buffer move up")
+      "w L" '(buf-move-right :wk "Buffer move right"))
+    )
+#+end_src
+
+#+RESULTS:
+: t
+
+** Misc. UI tweaks
+Hide scroll bar, tool bar and menu bar:
+#+begin_src emacs-lisp
+  (scroll-bar-mode -1)
+  (tool-bar-mode -1)
+  (menu-bar-mode -1)
+#+end_src
+
+Enable line numbering:
+#+begin_src emacs-lisp
+  (setq display-line-numbers-type 'relative)
+  (add-hook 'prog-mode-hook #'display-line-numbers-mode)
+  (add-hook 'text-mode-hook #'display-line-numbers-mode)
+#+end_src
+
+** use ESC key to cancel
+#+begin_src emacs-lisp
+  (global-set-key [escape] 'keyboard-escape-quit)
+#+end_src
+
+* Tools
+** Auto-Complete
+#+begin_src emacs-lisp
+  (use-package auto-complete
+    :ensure t
+    :config 
+    (ac-config-default)
+    )
+#+end_src
+
+** Ivy, Counsel
+Copied from [[https://gitlab.com/dwt1/configuring-emacs/-/blob/main/07-the-final-touches/config.org][DT's Emacs config]]:
+
++ Ivy, a generic completion mechanism for Emacs.
++ Counsel, a collection of Ivy-enhanced versions of common Emacs commands.
++ Ivy-rich allows us to add descriptions alongside the commands in M-x.
+
+#+begin_src emacs-lisp
+(use-package counsel
+  :after ivy
+  :diminish
+  :config 
+    (counsel-mode)
+    (setq ivy-initial-inputs-alist nil)) ;; removes starting ^ regex in M-x
+
+(use-package ivy
+  :bind
+  ;; ivy-resume resumes the last Ivy-based completion.
+  (("C-c C-r" . ivy-resume)
+   ("C-x B" . ivy-switch-buffer-other-window))
+  :diminish
+  :custom
+  (setq ivy-use-virtual-buffers t)
+  (setq ivy-count-format "(%d/%d) ")
+  (setq enable-recursive-minibuffers t)
+  :config
+  (ivy-mode))
+
+(use-package all-the-icons-ivy-rich
+  :ensure t
+  :init (all-the-icons-ivy-rich-mode 1))
+
+(use-package ivy-rich
+  :after ivy
+  :ensure t
+  :init (ivy-rich-mode 1) ;; this gets us descriptions in M-x.
+  :custom
+  (ivy-virtual-abbreviate 'full
+   ivy-rich-switch-buffer-align-virtual-buffer t
+   ivy-rich-path-style 'abbrev)
+  :config
+  (ivy-set-display-transformer 'ivy-switch-buffer
+                               'ivy-rich-switch-buffer-transformer))
+
+#+end_src
+
+* Text editing: Org Mode, LaTeX, etc.
+** Org Mode
+*Org-tempo* allows for example '<s' to be expanded to a source block
+#+begin_src emacs-lisp
+  (require 'org-tempo)
+#+end_src
+
+Automatically enable org-indent-mode
+#+begin_src emacs-lisp
+  (add-hook 'org-mode-hook 'org-indent-mode)
+#+end_src
+
+Setup $\LaTeX$ syntax highlighting
+#+begin_src emacs-lisp
+  (setq org-highlight-latex-and-related '(latex script entities))
+  (setq org-format-latex-options (plist-put org-format-latex-options :scale 1.5))
+#+end_src
+
+** PDF Tools
+To view PDFs inside Emacs
+#+begin_src emacs-lisp
+  (use-package pdf-tools
+    :config
+    (pdf-tools-install)
+    )
+#+end_src
+
+** LaTeX
+Install AucTeX and do some [[https://www.emacswiki.org/emacs/AUCTeX#h5o-2][customary customization]]:
+#+begin_src emacs-lisp
+  (use-package auctex)
+
+  (setq TeX-auto-save t)
+  (setq TeX-parse-self t)
+  (setq-default TeX-master nil)
+
+  (add-hook 'LaTeX-mode-hook 'visual-line-mode)
+  (add-hook 'LaTeX-mode-hook 'flyspell-mode)
+  (add-hook 'LaTeX-mode-hook 'LaTeX-math-mode)
+
+  (add-hook 'LaTeX-mode-hook 'turn-on-reftex)
+  (setq reftex-plug-into-AUCTeX t)
+#+end_src
+
+Open PDFs in Emacs: 
+#+begin_src emacs-lisp
+  ;; Use pdf-tools to open PDF files
+  (setq TeX-view-program-selection '((output-pdf "PDF Tools"))
+        TeX-source-correlate-start-server t)
+
+  ;; Update PDF buffers after successful LaTeX runs
+  (add-hook 'TeX-after-compilation-finished-functions
+            #'TeX-revert-document-buffer)
+#+end_src
+
+*** Custom keybindings
+#+begin_src emacs-lisp
+  (add-hook 'LaTeX-mode-hook (lambda ()
+                                (keymap-local-set "C-<return>" #'LaTeX-insert-item)
+                                (keymap-local-set "C-s" #'LaTeX-section)
+                                ))
+#+end_src
+
+*** Auto-view and auto-compile
+
+Open the PDFs /automatically/:
+#+begin_src emacs-lisp
+  ;; (add-hook 'LaTeX-mode-hook #'TeX-view)
+  ;; (add-hook 'LaTeX-mode-hook
+  ;;           (lambda ()
+  ;;             (let ((current-buffer (current-buffer)))
+  ;;               (TeX-view) ; Open the PDF
+  ;;               (switch-to-buffer-other-window current-buffer))) ; Switch back to LaTeX buffer in another window
+  ;;           )
+#+end_src
+
+Auto-compile the document on save:
+#+begin_src emacs-lisp
+  ;; (add-hook 'LaTeX-mode-hook
+  ;;           (add-hook 'after-save-hook
+  ;;                     (lambda ()
+  ;;                       (let ((current-buffer (current-buffer)))
+  ;;                         (TeX-command-run-all) ; Compile the PDF
+  ;;                         (switch-to-buffer-other-window current-buffer)) ; Switch back to LaTeX buffer in another window
+  ;;                       )
+  ;;                     nil t))
+#+end_src
+
+
+** Markdown
+#+begin_src emacs-lisp
+  (use-package markdown-mode
+    :ensure t
+    :mode ("README\\.md\\'" . gfm-mode)
+    :init
+    (setq markdown-command "pandoc")
+    (setq markdown-enable-math t)
+    )
+#+end_src

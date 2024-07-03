@@ -1,0 +1,12 @@
+# Ignore everything...
+*
+
+# ...except these files...
+!.gitignore
+!config.org
+!init.el
+
+# ...and .el files in the scripts folder
+!scripts/
+scripts/*
+!scripts/*.el
