@@ -16,6 +16,12 @@
 (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
 #+end_src
 
+** Set custom file
+#+begin_src emacs-lisp
+(setq custom-file (concat user-emacs-directory "custom.el"))
+(when (file-exists-p custom-file)
+  (load custom-file))
+#+end_src
 ** Load scripts 
 Add scripts folder to load path:
 #+begin_src emacs-lisp
