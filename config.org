@@ -33,7 +33,6 @@ Source scripts:
 (require 'buffer-move)
 #+end_src
 
-
 * UI and Keybindings
 ** Dracula theme
 #+begin_src emacs-lisp
@@ -46,20 +45,24 @@ Source scripts:
 ** Evil mode
 Setup vim-like keybindings using evil-mode:
 #+begin_src emacs-lisp
-(use-package evil
-  :ensure t
-  :init
+  (use-package evil
+    :ensure t
+    :init
     (setq evil-undo-system 'undo-redo)
-  (setq evil-want-integration t) ;; This is optional since it's already set to t by default.
-  (setq evil-want-keybinding nil)
-  :config
-  (evil-mode 1))
+    (setq evil-want-Y-yank-to-eol t)
+    (setq evil-want-C-d-scroll t)
+    (setq evil-want-C-u-scroll t)
+    ;; Needed for evil-collection (see below):
+    (setq evil-want-integration t) ;; This is optional since it's already set to t by default.
+    (setq evil-want-keybinding nil)
+    :config
+    (evil-mode 1))
 
-(use-package evil-collection
-  :after evil
-  :ensure t
-  :config
-  (evil-collection-init))
+  (use-package evil-collection
+    :after evil
+    :ensure t
+    :config
+    (evil-collection-init))
 #+end_src
 
 Add /vim-commentary/-like motions:
@@ -94,9 +97,6 @@ Use *evil-goggles* to give visual feedback:
     (setq evil-goggles-async-duration 0.300) ;; default is nil, i.e. use `evil-goggles-duration'
     )
 #+end_src
-
-#+RESULTS:
-: t
 
 ** Which key
 To see what keybindings actually do...
@@ -135,7 +135,7 @@ Install general.el and define some global keybindings.
 
     (my-leader-def
       "SPC" '(counsel-M-x :wk "Counsel M-x")
-      ;; BUFFERS
+
       "b" '(:ignore t :wk "Buffers")
       "b b" '(switch-to-buffer :wk "Switch to buffer")
       "b i" '(ibuffer :wk "Ibuffer")
@@ -171,12 +171,61 @@ Install general.el and define some global keybindings.
       "w H" '(buf-move-left :wk "Buffer move left")
       "w J" '(buf-move-down :wk "Buffer move down")
       "w K" '(buf-move-up :wk "Buffer move up")
-      "w L" '(buf-move-right :wk "Buffer move right"))
-    )
+      "w L" '(buf-move-right :wk "Buffer move right")
+    ))
 #+end_src
 
 #+RESULTS:
 : t
+
+*** Evil shorthands
+'yp' duplicates line ('yyp'):
+#+begin_src emacs-lisp
+  (defun duplicate-line ()
+    "Duplicate the current line."
+    (interactive)
+    (save-excursion
+      (beginning-of-line) ;; Go to the beginning of the line
+      (let ((start (point))) ;; Save the point (cursor position)
+        (end-of-line) ;; Go to the end of the line
+        (copy-region-as-kill start (point)) ;; Copy the line (including the newline character)
+        (newline) ;; Insert a new line below
+        (yank) ;; Yank (paste) the copied text
+        ))
+    (evil-next-line)
+    )
+
+  (general-nmap "y" (general-key-dispatch 'evil-yank "p" 'duplicate-line))
+#+end_src
+
+#+RESULTS:
+
+'dp' or 'dP' moves line down or up ('ddp' or 'ddP')
+#+begin_src emacs-lisp
+  (defun move-line-up ()
+    "Move the current line up."
+    (interactive)
+    (let ((col (current-column)))
+      (transpose-lines 1)
+      (forward-line -2)
+      (move-to-column col)))
+
+  (defun move-line-down ()
+    "Move the current line down."
+    (interactive)
+    (let ((col (current-column)))
+      (forward-line 1)
+      (transpose-lines 1)
+      (forward-line -1)
+      (move-to-column col)))
+
+  (general-nmap "d" (general-key-dispatch 'evil-delete
+                      "p" 'move-line-down
+                      "P" 'move-line-up
+                      ))
+#+end_src
+
+#+RESULTS:
 
 ** Misc. UI tweaks
 Hide scroll bar, tool bar and menu bar:
