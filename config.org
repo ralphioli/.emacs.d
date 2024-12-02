@@ -1,10 +1,10 @@
 #+TITLE: Emacs Config
 #+AUTHOR: Ralph Dreijer
-#+STARTUP: content
+#+STARTUP: overview
 #+STARTUP: latexpreview
 
-* To do first
-** Load package manager
+* General
+** Load use-package
 #+begin_src emacs-lisp
   (require 'package)
   (require 'use-package)
@@ -13,7 +13,7 @@
   (setq use-package-always-ensure t)
   (package-initialize)
 
-(add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
+  (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
 #+end_src
 
 ** Set custom file
@@ -22,18 +22,45 @@
 (when (file-exists-p custom-file)
   (load custom-file))
 #+end_src
+
+** Diminished modes
+Don't show all minor modes in the mode line
+#+begin_src emacs-lisp
+  (use-package diminish
+    :ensure t)
+#+end_src
+
 ** Load scripts 
 Add scripts folder to load path:
 #+begin_src emacs-lisp
-(add-to-list 'load-path "~/.emacs.d/scripts/")
+  (add-to-list 'load-path "~/.emacs.d/scripts/")
 #+end_src
 
 Source scripts:
 #+begin_src emacs-lisp
 (require 'buffer-move)
+(require 'multi-term)
 #+end_src
 
-* UI and Keybindings
+** Misc. tweaks
+#+begin_src emacs-lisp
+  (scroll-bar-mode -1) ;; Hide scrollbar
+  (tool-bar-mode -1) ;; Hide toolbar
+  (menu-bar-mode -1) ;; Hide menubar
+
+  (setq inhibit-startup-screen t) ;; Disable startup screen
+  (add-to-list 'initial-frame-alist '(fullscreen . maximized)) ;; Maximize on startup
+
+  (setopt use-short-answers t) ;; use y/n in prompts instead of typing out yes/no
+#+end_src
+
+Enable line numbering:
+#+begin_src emacs-lisp
+  (setq display-line-numbers-type 'relative)
+  (add-hook 'prog-mode-hook #'display-line-numbers-mode)
+  (add-hook 'text-mode-hook #'display-line-numbers-mode)
+#+end_src
+
 ** Dracula theme
 #+begin_src emacs-lisp
   (use-package dracula-theme
@@ -42,120 +69,350 @@ Source scripts:
   )
 #+end_src
 
+** Ivy, Counsel
+Copied from [[https://gitlab.com/dwt1/configuring-emacs/-/blob/main/07-the-final-touches/config.org][DT's Emacs config]]:
+
++ Ivy, a generic completion mechanism for Emacs.
++ Counsel, a collection of Ivy-enhanced versions of common Emacs commands.
++ Ivy-rich allows us to add descriptions alongside the commands in M-x.
+
+#+begin_src emacs-lisp
+  (use-package counsel
+    :after ivy
+    :diminish
+    :config 
+      (counsel-mode)
+      (setq ivy-initial-inputs-alist nil)) ;; removes starting ^ regex in M-x
+
+  (use-package ivy
+    :bind
+    ;; ivy-resume resumes the last Ivy-based completion.
+    (("C-c C-r" . ivy-resume)
+     ("C-x B" . ivy-switch-buffer-other-window))
+    :diminish
+    :custom
+    (setq ivy-use-virtual-buffers t)
+    (setq ivy-count-format "(%d/%d) ")
+    (setq enable-recursive-minibuffers t)
+    :config
+    (ivy-mode))
+#+end_src
+
+** Golden ratio
+Auto-resize windows
+#+begin_src emacs-lisp
+  (use-package golden-ratio
+    :ensure t
+    :config
+    (setq golden-ratio-auto-scale t)
+    (golden-ratio-mode 1)
+    )
+#+end_src
+
+Fix which-key (copied from [[https://github.com/roman/golden-ratio.el/issues/82#issuecomment-806822915][here]])
+#+begin_src emacs-lisp
+  (with-eval-after-load "which-key"
+    (add-to-list 'golden-ratio-inhibit-functions
+                 (lambda ()
+                   (and which-key--buffer
+                        (window-live-p (get-buffer-window which-key--buffer))))))
+#+end_src
+
+** Treemacs
+#+begin_src emacs-lisp
+  (use-package treemacs
+    :ensure t
+    :defer t
+    :init
+    (with-eval-after-load 'winum
+      (define-key winum-keymap (kbd "M-0") #'treemacs-select-window))
+    :config
+    (progn
+      (setq treemacs-collapse-dirs                   (if treemacs-python-executable 3 0)
+            treemacs-deferred-git-apply-delay        0.5
+            treemacs-directory-name-transformer      #'identity
+            treemacs-display-in-side-window          t
+            treemacs-eldoc-display                   'simple
+            treemacs-file-event-delay                2000
+            treemacs-file-extension-regex            treemacs-last-period-regex-value
+            treemacs-file-follow-delay               0.2
+            treemacs-file-name-transformer           #'identity
+            treemacs-follow-after-init               t
+            treemacs-expand-after-init               t
+            treemacs-find-workspace-method           'find-for-file-or-pick-first
+            treemacs-git-command-pipe                ""
+            treemacs-goto-tag-strategy               'refetch-index
+            treemacs-header-scroll-indicators        '(nil . "^^^^^^")
+            treemacs-hide-dot-git-directory          t
+            treemacs-indentation                     2
+            treemacs-indentation-string              " "
+            treemacs-is-never-other-window           nil
+            treemacs-max-git-entries                 5000
+            treemacs-missing-project-action          'ask
+            treemacs-move-files-by-mouse-dragging    t
+            treemacs-move-forward-on-expand          nil
+            treemacs-no-png-images                   nil
+            treemacs-no-delete-other-windows         t
+            treemacs-project-follow-cleanup          nil
+            treemacs-persist-file                    (expand-file-name ".cache/treemacs-persist" user-emacs-directory)
+            treemacs-position                        'left
+            treemacs-read-string-input               'from-child-frame
+            treemacs-recenter-distance               0.1
+            treemacs-recenter-after-file-follow      nil
+            treemacs-recenter-after-tag-follow       nil
+            treemacs-recenter-after-project-jump     'always
+            treemacs-recenter-after-project-expand   'on-distance
+            treemacs-litter-directories              '("/node_modules" "/.venv" "/.cask")
+            treemacs-project-follow-into-home        nil
+            treemacs-show-cursor                     nil
+            treemacs-show-hidden-files               t
+            treemacs-silent-filewatch                nil
+            treemacs-silent-refresh                  nil
+            treemacs-sorting                         'alphabetic-asc
+            treemacs-select-when-already-in-treemacs 'move-back
+            treemacs-space-between-root-nodes        t
+            treemacs-tag-follow-cleanup              t
+            treemacs-tag-follow-delay                1.5
+            treemacs-text-scale                      nil
+            treemacs-user-mode-line-format           nil
+            treemacs-user-header-line-format         nil
+            treemacs-wide-toggle-width               70
+            treemacs-width                           35
+            treemacs-width-increment                 1
+            treemacs-width-is-initially-locked       t
+            treemacs-workspace-switch-cleanup        nil)
+
+      ;; The default width and height of the icons is 22 pixels. If you are
+      ;; using a Hi-DPI display, uncomment this to double the icon size.
+      ;;(treemacs-resize-icons 44)
+
+      (treemacs-follow-mode t)
+      (treemacs-filewatch-mode t)
+      (treemacs-fringe-indicator-mode 'always)
+      (when treemacs-python-executable
+        (treemacs-git-commit-diff-mode t))
+
+      (pcase (cons (not (null (executable-find "git")))
+                   (not (null treemacs-python-executable)))
+        (`(t . t)
+         (treemacs-git-mode 'deferred))
+        (`(t . _)
+         (treemacs-git-mode 'simple)))
+
+      (treemacs-hide-gitignored-files-mode nil))
+    :bind
+    (:map global-map
+          ("M-0"       . treemacs-select-window)
+          ("C-x t 1"   . treemacs-delete-other-windows)
+          ("<f1>"   . treemacs)
+          ("C-x t d"   . treemacs-select-directory)
+          ("C-x t B"   . treemacs-bookmark)
+          ("C-x t C-t" . treemacs-find-file)
+          ("C-x t M-t" . treemacs-find-tag)))
+
+  (use-package treemacs-evil
+    :after (treemacs evil)
+    :ensure t)
+
+  ;; (use-package treemacs-projectile
+  ;;   :after (treemacs projectile)
+  ;;   :ensure t)
+
+  (use-package treemacs-icons-dired
+    :hook (dired-mode . treemacs-icons-dired-enable-once)
+    :ensure t)
+
+  (use-package treemacs-magit
+    :after (treemacs magit)
+    :ensure t)
+
+  ;; (use-package treemacs-persp ;;treemacs-perspective if you use perspective.el vs. persp-mode
+  ;;   :after (treemacs persp-mode) ;;or perspective vs. persp-mode
+  ;;   :ensure t
+  ;;   :config (treemacs-set-scope-type 'Perspectives))
+
+  ;; (use-package treemacs-tab-bar ;;treemacs-tab-bar if you use tab-bar-mode
+  ;;   :after (treemacs)
+  ;;   :ensure t
+  ;;   :config (treemacs-set-scope-type 'Tabs))
+
+  (treemacs-start-on-boot)
+#+end_src
+
+** Auto-Complete
+#+begin_src emacs-lisp
+  (use-package auto-complete
+    :ensure t
+    :config 
+    (ac-config-default)
+    )
+#+end_src
+
+** Git
+*** Magit
+#+begin_src emacs-lisp
+    (use-package magit
+    :ensure t
+  )
+#+end_src
+
+*** Diff-hl
+#+begin_src emacs-lisp
+  (use-package diff-hl
+    :ensure t
+    :config
+    (add-hook 'magit-pre-refresh-hook 'diff-hl-magit-pre-refresh)
+    (add-hook 'magit-post-refresh-hook 'diff-hl-magit-post-refresh)
+    (evil-define-key 'motion diff-hl-mode-map (kbd "[ g") #'diff-hl-previous-hunk)
+    (evil-define-key 'motion diff-hl-mode-map (kbd "] g") #'diff-hl-next-hunk)
+    (global-diff-hl-mode)
+    )
+#+end_src
+
+** Flyspell
+[[https://www.emacswiki.org/emacs/FlySpell#h5o-3][Copied from EmacsWiki:]]
+#+begin_src emacs-lisp
+  (defun flyspell-on-for-buffer-type ()
+    "Enable Flyspell appropriately for the major mode of the current buffer.  Uses `flyspell-prog-mode' for modes derived from `prog-mode', so only strings and comments get checked.  All other buffers get `flyspell-mode' to check all text.  If flyspell is already enabled, does nothing."
+    (interactive)
+    (if (not (symbol-value flyspell-mode)) ; if not already on
+        (progn
+          (if (derived-mode-p 'prog-mode)
+              (progn
+                (message "Flyspell on (code)")
+                (flyspell-prog-mode))
+            ;; else
+            (progn
+              (message "Flyspell on (text)")
+              (flyspell-mode 1)))
+          (flyspell-buffer)
+          )))
+
+  (defun flyspell-toggle ()
+    "Turn Flyspell on if it is off, or off if it is on.  When turning on, it uses `flyspell-on-for-buffer-type' so code-vs-text is handled appropriately."
+    (interactive)
+    (if (symbol-value flyspell-mode)
+        (progn ; flyspell is on, turn it off
+          (message "Flyspell off")
+          (flyspell-mode -1))
+                                          ; else - flyspell is off, turn it on
+      (flyspell-on-for-buffer-type)))
+#+end_src
+
+* Keybindings
 ** Evil mode
 Setup vim-like keybindings using evil-mode:
 #+begin_src emacs-lisp
-  (use-package evil
-    :ensure t
-    :init
-    (setq evil-undo-system 'undo-redo)
-    (setq evil-want-Y-yank-to-eol t)
-    (setq evil-want-C-d-scroll t)
-    (setq evil-want-C-u-scroll t)
-    ;; Needed for evil-collection (see below):
-    (setq evil-want-integration t) ;; This is optional since it's already set to t by default.
-    (setq evil-want-keybinding nil)
-    :config
-    (evil-mode 1))
+(use-package evil
+:ensure t
+:init
+(setq evil-undo-system 'undo-redo)
+(setq evil-want-Y-yank-to-eol t)
+(setq evil-want-C-d-scroll t)
+(setq evil-want-C-u-scroll t)
+;; Needed for evil-collection (see below):
+(setq evil-want-integration t) ;; This is optional since it's already set to t by default.
+(setq evil-want-keybinding nil)
+:config
+(evil-mode 1))
 
-  (use-package evil-collection
-    :after evil
-    :ensure t
-    :config
-    (evil-collection-init))
+(use-package evil-collection
+:after evil
+:ensure t
+:config
+(evil-collection-init))
+#+end_src
+
+Disable evil's RET keybinding (conflicts with org-return, and is useless anyway)
+#+begin_src emacs-lisp
+  (with-eval-after-load 'evil-maps
+    (define-key evil-motion-state-map (kbd "RET") nil))
 #+end_src
 
 Add /vim-commentary/-like motions:
 #+begin_src emacs-lisp
-  (use-package evil-commentary
-  :config
-  (evil-commentary-mode)
-  )
+(use-package evil-commentary
+:config
+(evil-commentary-mode)
+)
 #+end_src
 
 Use *evil-goggles* to give visual feedback:
 #+begin_src emacs-lisp
-  (use-package evil-goggles
-    :ensure t
-    :config
-    (evil-goggles-mode)
+(use-package evil-goggles
+:ensure t
+:config
+(evil-goggles-mode)
 
-    ;; optionally use diff-mode's faces; as a result, deleted text
-    ;; will be highlighed with `diff-removed` face which is typically
-    ;; some red color (as defined by the color theme)
-    ;; other faces such as `diff-added` will be used for other actions
-    (evil-goggles-use-diff-faces)
+;; optionally use diff-mode's faces; as a result, deleted text
+;; will be highlighed with `diff-removed` face which is typically
+;; some red color (as defined by the color theme)
+;; other faces such as `diff-added` will be used for other actions
+(evil-goggles-use-diff-faces)
 
-    ;; this variable affects "blocking" hints, for example when deleting - the hint is displayed,
-    ;; the deletion is delayed (blocked) until the hint disappers, then the hint is removed and the
-    ;; deletion executed; it makes sense to have this duration short
-    (setq evil-goggles-blocking-duration 0.100) ;; default is nil, i.e. use `evil-goggles-duration'
+;; this variable affects "blocking" hints, for example when deleting - the hint is displayed,
+;; the deletion is delayed (blocked) until the hint disappers, then the hint is removed and the
+;; deletion executed; it makes sense to have this duration short
+(setq evil-goggles-blocking-duration 0.100) ;; default is nil, i.e. use `evil-goggles-duration'
 
-    ;; this variable affects "async" hints, for example when indenting - the indentation
-    ;; is performed with the hint visible, i.e. the hint is displayed, the action (indent) is
-    ;; executed (asynchronous), then the hint is removed, highlighting the result of the indentation
-    (setq evil-goggles-async-duration 0.300) ;; default is nil, i.e. use `evil-goggles-duration'
-    )
+;; this variable affects "async" hints, for example when indenting - the indentation
+;; is performed with the hint visible, i.e. the hint is displayed, the action (indent) is
+;; executed (asynchronous), then the hint is removed, highlighting the result of the indentation
+(setq evil-goggles-async-duration 0.300) ;; default is nil, i.e. use `evil-goggles-duration'
+)
 #+end_src
 
-** Which key
-To see what keybindings actually do...
-#+begin_src emacs-lisp
-  (use-package which-key
-  :config
-  (setq which-key-idle-delay 0)
-  (which-key-mode)
-    (which-key-setup-side-window-bottom)
-  )
-#+end_src
-
-** All the icons
-#+begin_src emacs-lisp
-(use-package all-the-icons
-  :ensure t
-  :if (display-graphic-p))
-
-(use-package all-the-icons-dired
-  :hook (dired-mode . (lambda () (all-the-icons-dired-mode t))))
-#+end_src
-
-** General keybindings
+** General.el
 Install general.el and define some global keybindings.
 #+begin_src emacs-lisp
   (use-package general
-    :config
-    (general-evil-setup)
+  :config
+  (general-evil-setup)
 
-    ;; set up 'SPC' as the global leader key
-    (general-create-definer my-leader-def
-      :states '(normal insert visual emacs)
+  ;; set up 'SPC' as the global leader key
+  (general-create-definer my-leader-def
+      :states '(normal insert visual emacs treemacs)
       :keymaps 'override
       :prefix "SPC" ;; set leader
       :global-prefix "C-SPC") ;; access leader in insert mode
 
-    (my-leader-def
+  (my-leader-def
       "SPC" '(counsel-M-x :wk "Counsel M-x")
 
       "b" '(:ignore t :wk "Buffers")
-      "b b" '(switch-to-buffer :wk "Switch to buffer")
+      "b b" '(counsel-switch-buffer :wk "Switch to buffer")
       "b i" '(ibuffer :wk "Ibuffer")
       "b k" '(kill-current-buffer :wk "Kill this buffer")
       "b n" '(next-buffer :wk "Next buffer")
+      "b o" '(counsel-switch-buffer-other-window :wk "Switch buffer Other window")
       "b p" '(previous-buffer :wk "Previous buffer")
+      "b r" '(rename-buffer :wk "Rename buffer")
+      "b x" '(kill-buffer-and-window :wk "Kill buffer, close window")
+
       ;; FILES
       "f" '(:ignore t :wk "Files")
-      "f c" '((lambda () (interactive) (let ((default-directory "~/.emacs.d")) (call-interactively 'find-file))) :wk "Find Emacs config file")
-      "f f" '(find-file :wk "Find file")
-      "f h" '((lambda () (interactive) (let ((default-directory "/ssh:root@homeassistant:/config")) (call-interactively 'find-file))) :wk "Find Home Assistant file")
+      ;; "f c" '((lambda () (interactive) (let ((default-directory "~/.emacs.d")) (call-interactively 'find-file))) :wk "Find Emacs config file")
+      "f f" '(counsel-find-file :wk "Find file")
+      ;; "f h" '((lambda () (interactive) (let ((default-directory "/ssh:root@homeassistant:/config")) (call-interactively 'find-file))) :wk "Find Home Assistant file")
       "f o" '(find-file-other-window :wk "Find file Other window")
       "f r" '(counsel-recentf :wk "Recent files")
-      ;; TABS
-      "t" '(:ignore t :wk "Tabs")
-      "t c" '(tab-bar-new-tab :wk "Create new tab")
-      "t n" '(tab-bar-switch-to-next-tab :wk "Next tab")
-      "t p" '(tab-bar-switch-to-prev-tab :wk "Previous tab")
-      "t u" '(tab-bar-undo-close-tab :wk "Undo close tab")
-      "t x" '(tab-bar-close-tab :wk "Close tab")
+
+      ;; GIT
+      "g" '(:ignore t :wk "Git")
+      "g s" '(magit-status :wk "Git status")
+
+      ;; SPELL CHECKING
+      "s" '(:ignore t :wk "Spell Checking")
+      "s s" '(flyspell-toggle :wk "Toggle")
+      "s b" '(flyspell-buffer :wk "Scan Buffer")
+      "s d" '(ispell-change-dictionary :wk "Change dictionary")
+
+      ;; TERMINAL
+      "t" '(:ignore t :wk "Terminal")
+      "t n" '(multi-term-next :wk "Next Terminal")
+      "t p" '(multi-term-prev :wk "Previous Terminal")
+      "t t" '(multi-term :wk "New Terminal")
+
       ;; WINDOWS
       "w" '(:ignore t :wk "Windows")
       ;; Window splits
@@ -177,132 +434,21 @@ Install general.el and define some global keybindings.
       ))
 #+end_src
 
-#+RESULTS:
-: t
-
-*** Evil shorthands
-'yp' duplicates line ('yyp'):
+** Which key
+To see what keybindings actually do...
 #+begin_src emacs-lisp
-  (defun duplicate-line ()
-    "Duplicate the current line."
-    (interactive)
-    (save-excursion
-      (beginning-of-line) ;; Go to the beginning of the line
-      (let ((start (point))) ;; Save the point (cursor position)
-        (end-of-line) ;; Go to the end of the line
-        (copy-region-as-kill start (point)) ;; Copy the line (including the newline character)
-        (newline) ;; Insert a new line below
-        (yank) ;; Yank (paste) the copied text
-        ))
-    (evil-next-line)
-    )
-
-  (general-nmap "y" (general-key-dispatch 'evil-yank "p" 'duplicate-line))
-#+end_src
-
-#+RESULTS:
-
-'dp' or 'dP' moves line down or up ('ddp' or 'ddP')
-#+begin_src emacs-lisp
-  (defun move-line-up ()
-    "Move the current line up."
-    (interactive)
-    (let ((col (current-column)))
-      (transpose-lines 1)
-      (forward-line -2)
-      (move-to-column col)))
-
-  (defun move-line-down ()
-    "Move the current line down."
-    (interactive)
-    (let ((col (current-column)))
-      (forward-line 1)
-      (transpose-lines 1)
-      (forward-line -1)
-      (move-to-column col)))
-
-  (general-nmap "d" (general-key-dispatch 'evil-delete
-                      "p" 'move-line-down
-                      "P" 'move-line-up
-                      ))
-#+end_src
-
-#+RESULTS:
-
-** Misc. UI tweaks
-Hide scroll bar, tool bar and menu bar:
-#+begin_src emacs-lisp
-  (scroll-bar-mode -1)
-  (tool-bar-mode -1)
-  (menu-bar-mode -1)
-#+end_src
-
-Enable line numbering:
-#+begin_src emacs-lisp
-  (setq display-line-numbers-type 'relative)
-  (add-hook 'prog-mode-hook #'display-line-numbers-mode)
-  (add-hook 'text-mode-hook #'display-line-numbers-mode)
-#+end_src
-
-** use ESC key to cancel
-#+begin_src emacs-lisp
-  (global-set-key [escape] 'keyboard-escape-quit)
-#+end_src
-
-* Tools
-** Auto-Complete
-#+begin_src emacs-lisp
-  (use-package auto-complete
-    :ensure t
-    :config 
-    (ac-config-default)
+  (use-package which-key
+    :diminish
+    :config
+    (setq which-key-idle-delay 0)
+    (which-key-mode)
+    (which-key-setup-side-window-bottom)
     )
 #+end_src
 
-** Ivy, Counsel
-Copied from [[https://gitlab.com/dwt1/configuring-emacs/-/blob/main/07-the-final-touches/config.org][DT's Emacs config]]:
-
-+ Ivy, a generic completion mechanism for Emacs.
-+ Counsel, a collection of Ivy-enhanced versions of common Emacs commands.
-+ Ivy-rich allows us to add descriptions alongside the commands in M-x.
-
+** Use escape key instead of ctrl-g:
 #+begin_src emacs-lisp
-(use-package counsel
-  :after ivy
-  :diminish
-  :config 
-    (counsel-mode)
-    (setq ivy-initial-inputs-alist nil)) ;; removes starting ^ regex in M-x
-
-(use-package ivy
-  :bind
-  ;; ivy-resume resumes the last Ivy-based completion.
-  (("C-c C-r" . ivy-resume)
-   ("C-x B" . ivy-switch-buffer-other-window))
-  :diminish
-  :custom
-  (setq ivy-use-virtual-buffers t)
-  (setq ivy-count-format "(%d/%d) ")
-  (setq enable-recursive-minibuffers t)
-  :config
-  (ivy-mode))
-
-(use-package all-the-icons-ivy-rich
-  :ensure t
-  :init (all-the-icons-ivy-rich-mode 1))
-
-(use-package ivy-rich
-  :after ivy
-  :ensure t
-  :init (ivy-rich-mode 1) ;; this gets us descriptions in M-x.
-  :custom
-  (ivy-virtual-abbreviate 'full
-   ivy-rich-switch-buffer-align-virtual-buffer t
-   ivy-rich-path-style 'abbrev)
-  :config
-  (ivy-set-display-transformer 'ivy-switch-buffer
-                               'ivy-rich-switch-buffer-transformer))
-
+(global-set-key [escape] 'keyboard-escape-quit)
 #+end_src
 
 * Text editing: Org Mode, LaTeX, etc.
@@ -312,15 +458,88 @@ Copied from [[https://gitlab.com/dwt1/configuring-emacs/-/blob/main/07-the-final
   (require 'org-tempo)
 #+end_src
 
-Automatically enable org-indent-mode
+Automatically enable org-indent-mode, visual-line-mode
 #+begin_src emacs-lisp
   (add-hook 'org-mode-hook 'org-indent-mode)
+  (add-hook 'org-mode-hook 'visual-line-mode)
 #+end_src
 
 Setup $\LaTeX$ syntax highlighting
 #+begin_src emacs-lisp
   (setq org-highlight-latex-and-related '(latex script entities))
   (setq org-format-latex-options (plist-put org-format-latex-options :scale 1.5))
+#+end_src
+
+Set misc. other variables
+#+begin_src emacs-lisp
+  (setq org-image-actual-width 400)
+  (setq org-return-follows-link t)
+#+end_src
+
+*** Org-download
+For inserting images
+
+#+begin_src emacs-lisp
+  (use-package org-download
+    :after org
+    :custom
+    (org-download-method 'directory)
+    (org-download-image-dir "./org-images")
+    (org-download-heading-lvl nil)
+    )
+
+  ;; Drag-and-drop to `dired`
+  (add-hook 'dired-mode-hook 'org-download-enable)
+#+end_src
+
+*** (Slightly) better versions of org commands
+org-indent-block, but the cursor doesn't have to be at the head of a block:
+#+begin_src emacs-lisp
+  (defun better-org-indent-block ()
+    (interactive)
+    (org-babel-goto-src-block-head)
+    (org-indent-block)
+    )
+#+end_src
+
+Inserting headings (ctrl-enter) but 0.001% faster by going into insert mode:
+#+begin_src emacs-lisp
+  (defun better-org-insert-heading ()
+    (interactive)
+    (org-insert-heading-respect-content)
+    (evil-insert 1)
+    )
+
+  (with-eval-after-load "org"
+    (define-key org-mode-map (kbd "C-<return>") #'better-org-insert-heading))
+#+end_src
+
+*** Keybindings
+#+begin_src emacs-lisp
+  (my-leader-def org-mode-map
+    "c" '(:ignore t :wk "Org mode")
+
+    ;; Code blocks
+    "c b" '(:ignore t :wk "Code block")
+    "c b i" '(better-org-indent-block :wk "Indent block")
+    "c b r" '(org-babel-hide-result-toggle :wk "Hide/show result")
+    "c b R" '(org-babel-remove-result :wk "Remove result")
+    "c b C-r" '((lambda () (interactive) (org-babel-remove-result-one-or-many 1))
+                :wk "Remove ALL results")
+
+    ;; For working with images
+    "c i" '(:ignore t :wk "Image")
+    "c i d" '(org-download-delete :wk "Delete image")
+    "c i i" '(org-toggle-inline-images :wk "Toggle inline images")
+    "c i p" '(org-download-clipboard :wk "Paste from clipboard")
+    "c i P" '(org-download-yank :wk "Paste from link")
+
+    ;; Other misc shortcuts
+    "c c" '(org-ctrl-c-ctrl-c :wk "Context action")
+    "c e" '(org-export-dispatch :wk "Export")
+    "c l" '(org-latex-preview :wk "Toggle LaTeX preview")
+    "c h" '(org-toggle-heading :wk "Toggle heading")
+    )
 #+end_src
 
 ** PDF Tools
@@ -393,7 +612,6 @@ Auto-compile the document on save:
   ;;                     nil t))
 #+end_src
 
-
 ** Markdown
 #+begin_src emacs-lisp
   (use-package markdown-mode
@@ -403,4 +621,23 @@ Auto-compile the document on save:
     (setq markdown-command "pandoc")
     (setq markdown-enable-math t)
     )
+#+end_src
+
+* Arduino
+
+Install *arduino-mode* for syntax highlighting:
+#+begin_src emacs-lisp
+  (use-package arduino-mode
+    :ensure t)
+#+end_src
+
+Install *arduino-cli-mode* for compiling and uploading:
+#+begin_src emacs-lisp
+  (use-package arduino-cli-mode
+    :ensure t
+    :hook arduino-mode
+    ;; :mode "\\.ino\\'"
+    :custom
+    (arduino-cli-warnings 'all)
+    (arduino-cli-verify t))
 #+end_src
