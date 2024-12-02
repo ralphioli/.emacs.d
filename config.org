@@ -399,7 +399,9 @@ Install general.el and define some global keybindings.
 
       ;; GIT
       "g" '(:ignore t :wk "Git")
-      "g s" '(magit-status :wk "Git status")
+      "g g" '(magit-status :wk "Magit")
+      "g r" '(diff-hl-revert-hunk :wk "Revert hunk")
+      "g s" '(diff-hl-show-hunk :wk "Show hunk")
 
       ;; SPELL CHECKING
       "s" '(:ignore t :wk "Spell Checking")
@@ -433,6 +435,9 @@ Install general.el and define some global keybindings.
       "w L" '(buf-move-right :wk "Buffer move right")
       ))
 #+end_src
+
+#+RESULTS:
+: t
 
 ** Which key
 To see what keybindings actually do...
