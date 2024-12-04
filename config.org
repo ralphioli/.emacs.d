@@ -260,6 +260,7 @@ Fix which-key (copied from [[https://github.com/roman/golden-ratio.el/issues/82#
 #+begin_src emacs-lisp
   (use-package diff-hl
     :ensure t
+    :after evil
     :config
     (add-hook 'magit-pre-refresh-hook 'diff-hl-magit-pre-refresh)
     (add-hook 'magit-post-refresh-hook 'diff-hl-magit-post-refresh)
