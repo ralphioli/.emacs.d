@@ -300,6 +300,20 @@ Fix which-key (copied from [[https://github.com/roman/golden-ratio.el/issues/82#
       (flyspell-on-for-buffer-type)))
 #+end_src
 
+** highlight-indent-guides.el
+#+begin_src emacs-lisp
+  (use-package highlight-indent-guides
+    :ensure t
+    :config
+    (setq highlight-indent-guides-method 'bitmap)
+    (setq highlight-indent-guides-auto-character-face-perc 35)
+    (add-hook 'prog-mode-hook 'highlight-indent-guides-mode)
+    )
+#+end_src
+
+#+RESULTS:
+: t
+
 * Keybindings
 ** Evil mode
 Setup vim-like keybindings using evil-mode:
