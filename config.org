@@ -74,7 +74,6 @@ Copied from [[https://gitlab.com/dwt1/configuring-emacs/-/blob/main/07-the-final
 
 + Ivy, a generic completion mechanism for Emacs.
 + Counsel, a collection of Ivy-enhanced versions of common Emacs commands.
-+ Ivy-rich allows us to add descriptions alongside the commands in M-x.
 
 #+begin_src emacs-lisp
   (use-package counsel
@@ -311,8 +310,59 @@ Fix which-key (copied from [[https://github.com/roman/golden-ratio.el/issues/82#
     )
 #+end_src
 
-#+RESULTS:
-: t
+** SSH stuff
+Get hosts from ssh config file:
+#+begin_src emacs-lisp
+  (defun parse-ssh-config-hosts (ssh-config-file)
+    "Parse the SSH config file and return a list of hosts."
+    (let ((hosts '()))
+      (when (file-readable-p ssh-config-file)
+        (with-temp-buffer
+          (insert-file-contents ssh-config-file)
+          (goto-char (point-min))
+          (while (re-search-forward "^Host[ \t]+\\(.*\\)$" nil t)
+            (let ((host-line (match-string 1)))
+              (dolist (host (split-string host-line))
+                (unless (string-match-p "[*?]" host) ;; Ignore wildcards
+                  (push host hosts)))))))
+      (delete-dups hosts)))
+#+end_src
+
+Make an ivy menu for it:
+#+begin_src emacs-lisp
+  (defun ivy-ssh-config-hosts ()
+    "Return a selected SSH host from the SSH config file using Ivy."
+    (let* ((ssh-config-file (expand-file-name "~/.ssh/config"))
+           (hosts (parse-ssh-config-hosts ssh-config-file)))
+      (if hosts
+          (ivy-read "SSH Hosts: " hosts)
+        (user-error "No hosts found in %s" ssh-config-file))))
+#+end_src
+
+*** SSH find file
+#+begin_src emacs-lisp
+  (defun find-file-ssh ()
+    "Open a file on a remote SSH host."
+    (interactive)
+    (let* ((host (ivy-ssh-config-hosts))
+           (default-directory (concat "/ssh:" host ":")))
+      (call-interactively #'counsel-find-file)))
+#+end_src
+
+*** SSH Terminal
+#+begin_src emacs-lisp
+  (defun ssh-multi-term ()
+    (interactive)
+    (let* (
+           (host (ivy-ssh-config-hosts))
+           (multi-term-program "/bin/sh")
+           (multi-term-buffer-name (format "SSH: %s" host))
+           (term-cmd (format "ssh %s\n" host))
+           (term-buffer (multi-term))
+           )
+      (term-send-raw-string term-cmd)
+      ))
+#+end_src
 
 * Keybindings
 ** Evil mode
@@ -406,17 +456,17 @@ Install general.el and define some global keybindings.
 
       ;; FILES
       "f" '(:ignore t :wk "Files")
-      ;; "f c" '((lambda () (interactive) (let ((default-directory "~/.emacs.d")) (call-interactively 'find-file))) :wk "Find Emacs config file")
       "f f" '(counsel-find-file :wk "Find file")
-      ;; "f h" '((lambda () (interactive) (let ((default-directory "/ssh:root@homeassistant:/config")) (call-interactively 'find-file))) :wk "Find Home Assistant file")
       "f o" '(find-file-other-window :wk "Find file Other window")
       "f r" '(counsel-recentf :wk "Recent files")
+      "f s" '(find-file-ssh :wk "Find file (SSH)")
 
       ;; GIT
       "g" '(:ignore t :wk "Git")
       "g g" '(magit-status :wk "Magit")
       "g r" '(diff-hl-revert-hunk :wk "Revert hunk")
       "g s" '(diff-hl-show-hunk :wk "Show hunk")
+      "g v" '(diff-hl-mode :wk "Toggle diff highlighting")
 
       ;; SPELL CHECKING
       "s" '(:ignore t :wk "Spell Checking")
@@ -428,7 +478,15 @@ Install general.el and define some global keybindings.
       "t" '(:ignore t :wk "Terminal")
       "t n" '(multi-term-next :wk "Next Terminal")
       "t p" '(multi-term-prev :wk "Previous Terminal")
+      "t s" '(ssh-multi-term :wk "SSH connection")
       "t t" '(multi-term :wk "New Terminal")
+
+      ;; VIEW
+      "v" '(:ignore t :wk "View")
+      "v g" '(diff-hl-mode :wk "Git Diff Highlighting")
+      "v l" '(display-line-numbers-mode :wk "Line numbers")
+      "v t" '(toggle-truncate-lines :wk "Truncate lines")
+      "v v" '(visual-line-mode :wk "Visual line mode")
 
       ;; WINDOWS
       "w" '(:ignore t :wk "Windows")
@@ -437,6 +495,7 @@ Install general.el and define some global keybindings.
       "w n" '(evil-window-new :wk "New window")
       "w s" '(evil-window-split :wk "Horizontal split window")
       "w v" '(evil-window-vsplit :wk "Vertical split window")
+      "w x" '(kill-buffer-and-window :wk "Kill buffer, close window")
       ;; Window motions
       "w h" '(evil-window-left :wk "Window left")
       "w j" '(evil-window-down :wk "Window down")
@@ -450,9 +509,6 @@ Install general.el and define some global keybindings.
       "w L" '(buf-move-right :wk "Buffer move right")
       ))
 #+end_src
-
-#+RESULTS:
-: t
 
 ** Which key
 To see what keybindings actually do...
@@ -660,4 +716,12 @@ Install *arduino-cli-mode* for compiling and uploading:
     :custom
     (arduino-cli-warnings 'all)
     (arduino-cli-verify t))
+#+end_src
+
+* Misc. languages
+** YAML
+#+begin_src emacs-lisp
+  (use-package yaml-mode
+    :ensure t
+    )
 #+end_src
