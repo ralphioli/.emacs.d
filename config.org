@@ -23,13 +23,6 @@
   (load custom-file))
 #+end_src
 
-** Diminished modes
-Don't show all minor modes in the mode line
-#+begin_src emacs-lisp
-  (use-package diminish
-    :ensure t)
-#+end_src
-
 ** Load scripts 
 Add scripts folder to load path:
 #+begin_src emacs-lisp
@@ -42,7 +35,30 @@ Source scripts:
 (require 'multi-term)
 #+end_src
 
-** Misc. tweaks
+** Dracula theme
+#+begin_src emacs-lisp
+  (use-package dracula-theme
+   :config
+   (load-theme 'dracula)
+  )
+#+end_src
+
+** Modeline
+*** Diminished modes
+Don't show all minor modes in the mode line
+#+begin_src emacs-lisp
+  (use-package diminish
+    :ensure t)
+#+end_src
+
+*** Show word count
+#+begin_src emacs-lisp
+  (use-package wc-mode
+    :ensure t
+    )
+#+end_src
+
+** Misc. UI tweaks
 #+begin_src emacs-lisp
   (scroll-bar-mode -1) ;; Hide scrollbar
   (tool-bar-mode -1) ;; Hide toolbar
@@ -59,14 +75,6 @@ Enable line numbering:
   (setq display-line-numbers-type 'relative)
   (add-hook 'prog-mode-hook #'display-line-numbers-mode)
   (add-hook 'text-mode-hook #'display-line-numbers-mode)
-#+end_src
-
-** Dracula theme
-#+begin_src emacs-lisp
-  (use-package dracula-theme
-   :config
-   (load-theme 'dracula)
-  )
 #+end_src
 
 ** Ivy, Counsel
@@ -302,6 +310,7 @@ Fix which-key (copied from [[https://github.com/roman/golden-ratio.el/issues/82#
 ** highlight-indent-guides.el
 #+begin_src emacs-lisp
   (use-package highlight-indent-guides
+    :diminish
     :ensure t
     :config
     (setq highlight-indent-guides-method 'bitmap)
@@ -368,24 +377,28 @@ Make an ivy menu for it:
 ** Evil mode
 Setup vim-like keybindings using evil-mode:
 #+begin_src emacs-lisp
-(use-package evil
-:ensure t
-:init
-(setq evil-undo-system 'undo-redo)
-(setq evil-want-Y-yank-to-eol t)
-(setq evil-want-C-d-scroll t)
-(setq evil-want-C-u-scroll t)
-;; Needed for evil-collection (see below):
-(setq evil-want-integration t) ;; This is optional since it's already set to t by default.
-(setq evil-want-keybinding nil)
-:config
-(evil-mode 1))
+  (use-package evil
+    :ensure t
+    :init
+    (setq evil-undo-system 'undo-redo)
+    (setq evil-want-fine-undo t)
+    (setq evil-want-Y-yank-to-eol t)
+    (setq evil-want-C-d-scroll t)
+    (setq evil-want-C-u-scroll t)
+    ;; Needed for evil-collection (see below):
+    (setq evil-want-integration t) ;; This is optional since it's already set to t by default.
+    (setq evil-want-keybinding nil)
+    :config
+    (evil-mode 1)
+    )
 
-(use-package evil-collection
-:after evil
-:ensure t
-:config
-(evil-collection-init))
+  (use-package evil-collection
+    :diminish evil-collection-unimpaired-mode
+    :after evil
+    :ensure t
+    :config
+    (evil-collection-init)
+    )
 #+end_src
 
 Disable evil's RET keybinding (conflicts with org-return, and is useless anyway)
@@ -396,35 +409,49 @@ Disable evil's RET keybinding (conflicts with org-return, and is useless anyway)
 
 Add /vim-commentary/-like motions:
 #+begin_src emacs-lisp
-(use-package evil-commentary
-:config
-(evil-commentary-mode)
-)
+  (use-package evil-commentary
+    :diminish
+    :config
+    (evil-commentary-mode)
+    )
 #+end_src
 
 Use *evil-goggles* to give visual feedback:
 #+begin_src emacs-lisp
-(use-package evil-goggles
-:ensure t
-:config
-(evil-goggles-mode)
+  (use-package evil-goggles
+    :diminish
+    :ensure t
+    :config
+    (evil-goggles-mode)
 
-;; optionally use diff-mode's faces; as a result, deleted text
-;; will be highlighed with `diff-removed` face which is typically
-;; some red color (as defined by the color theme)
-;; other faces such as `diff-added` will be used for other actions
-(evil-goggles-use-diff-faces)
+    ;; optionally use diff-mode's faces; as a result, deleted text
+    ;; will be highlighed with `diff-removed` face which is typically
+    ;; some red color (as defined by the color theme)
+    ;; other faces such as `diff-added` will be used for other actions
+    (evil-goggles-use-diff-faces)
 
-;; this variable affects "blocking" hints, for example when deleting - the hint is displayed,
-;; the deletion is delayed (blocked) until the hint disappers, then the hint is removed and the
-;; deletion executed; it makes sense to have this duration short
-(setq evil-goggles-blocking-duration 0.100) ;; default is nil, i.e. use `evil-goggles-duration'
+    ;; this variable affects "blocking" hints, for example when deleting - the hint is displayed,
+    ;; the deletion is delayed (blocked) until the hint disappers, then the hint is removed and the
+    ;; deletion executed; it makes sense to have this duration short
+    (setq evil-goggles-blocking-duration 0.100) ;; default is nil, i.e. use `evil-goggles-duration'
 
-;; this variable affects "async" hints, for example when indenting - the indentation
-;; is performed with the hint visible, i.e. the hint is displayed, the action (indent) is
-;; executed (asynchronous), then the hint is removed, highlighting the result of the indentation
-(setq evil-goggles-async-duration 0.300) ;; default is nil, i.e. use `evil-goggles-duration'
-)
+    ;; this variable affects "async" hints, for example when indenting - the indentation
+    ;; is performed with the hint visible, i.e. the hint is displayed, the action (indent) is
+    ;; executed (asynchronous), then the hint is removed, highlighting the result of the indentation
+    (setq evil-goggles-async-duration 0.300) ;; default is nil, i.e. use `evil-goggles-duration'
+    )
+#+end_src
+
+*evil-numbers*: c-a and c-x like in vim:
+#+begin_src emacs-lisp
+  (use-package evil-numbers
+    :ensure t
+    :config
+    (evil-define-key '(normal visual) 'global (kbd "C-a") 'evil-numbers/inc-at-pt)
+    (evil-define-key '(normal visual) 'global (kbd "C-x") 'evil-numbers/dec-at-pt)
+    (evil-define-key '(normal visual) 'global (kbd "g C-a") 'evil-numbers/inc-at-pt-incremental)
+    (evil-define-key '(normal visual) 'global (kbd "g C-x") 'evil-numbers/dec-at-pt-incremental)
+  )
 #+end_src
 
 ** General.el
@@ -442,7 +469,8 @@ Install general.el and define some global keybindings.
       :global-prefix "C-SPC") ;; access leader in insert mode
 
   (my-leader-def
-      "SPC" '(counsel-M-x :wk "Counsel M-x")
+      "SPC" '(counsel-M-x :wk "Run Command")
+      "." '(counsel-command-history :wk "Command History")
 
       "b" '(:ignore t :wk "Buffers")
       "b b" '(counsel-switch-buffer :wk "Switch to buffer")
@@ -593,28 +621,28 @@ Inserting headings (ctrl-enter) but 0.001% faster by going into insert mode:
 *** Keybindings
 #+begin_src emacs-lisp
   (my-leader-def org-mode-map
-    "c" '(:ignore t :wk "Org mode")
+    "c" '("Org mode" . (keymap))
 
     ;; Code blocks
-    "c b" '(:ignore t :wk "Code block")
-    "c b i" '(better-org-indent-block :wk "Indent block")
-    "c b r" '(org-babel-hide-result-toggle :wk "Hide/show result")
-    "c b R" '(org-babel-remove-result :wk "Remove result")
-    "c b C-r" '((lambda () (interactive) (org-babel-remove-result-one-or-many 1))
-                :wk "Remove ALL results")
+    "c b" '("Code block" . (keymap))
+    "c b i" '("Indent block" . better-org-indent-block)
+    "c b r" '("Hide/show result" . org-babel-hide-result-toggle)
+    "c b R" '("Remove result" . org-babel-remove-result)
+    "c b C-r" '("Remove ALL results" .
+                (lambda () (interactive) (org-babel-remove-result-one-or-many 1)))
 
     ;; For working with images
-    "c i" '(:ignore t :wk "Image")
-    "c i d" '(org-download-delete :wk "Delete image")
-    "c i i" '(org-toggle-inline-images :wk "Toggle inline images")
-    "c i p" '(org-download-clipboard :wk "Paste from clipboard")
-    "c i P" '(org-download-yank :wk "Paste from link")
+    "c i" '("Image" . (keymap))
+    "c i d" '("Delete image" . org-download-delete)
+    "c i i" '("Toggle inline images" . org-toggle-inline-images)
+    "c i p" '("Paste from clipboard" . org-download-clipboard)
+    "c i P" '("Paste from link" . org-download-yank)
 
     ;; Other misc shortcuts
-    "c c" '(org-ctrl-c-ctrl-c :wk "Context action")
-    "c e" '(org-export-dispatch :wk "Export")
-    "c l" '(org-latex-preview :wk "Toggle LaTeX preview")
-    "c h" '(org-toggle-heading :wk "Toggle heading")
+    "c c" '("Context action" . org-ctrl-c-ctrl-c)
+    "c e" '("Export" . org-export-dispatch)
+    "c l" '("Toggle LaTeX preview" . org-latex-preview)
+    "c h" '("Toggle heading" . org-toggle-heading)
     )
 #+end_src
 
@@ -655,37 +683,32 @@ Open PDFs in Emacs:
             #'TeX-revert-document-buffer)
 #+end_src
 
-*** Custom keybindings
+*** Keybindings
 #+begin_src emacs-lisp
-  (add-hook 'LaTeX-mode-hook (lambda ()
-                                (keymap-local-set "C-<return>" #'LaTeX-insert-item)
-                                (keymap-local-set "C-s" #'LaTeX-section)
-                                ))
+  (my-leader-def LaTeX-mode-map
+    "c" '("LaTeX" . (keymap))
+
+    "c c" '("Command" . TeX-command-master)
+    "c s" '("Section" . LaTeX-section)
+    )
 #+end_src
 
-*** Auto-view and auto-compile
-
-Open the PDFs /automatically/:
+*** Word-count function
+Use detex output for word count
 #+begin_src emacs-lisp
-  ;; (add-hook 'LaTeX-mode-hook #'TeX-view)
-  ;; (add-hook 'LaTeX-mode-hook
-  ;;           (lambda ()
-  ;;             (let ((current-buffer (current-buffer)))
-  ;;               (TeX-view) ; Open the PDF
-  ;;               (switch-to-buffer-other-window current-buffer))) ; Switch back to LaTeX buffer in another window
-  ;;           )
-#+end_src
-
-Auto-compile the document on save:
-#+begin_src emacs-lisp
-  ;; (add-hook 'LaTeX-mode-hook
-  ;;           (add-hook 'after-save-hook
-  ;;                     (lambda ()
-  ;;                       (let ((current-buffer (current-buffer)))
-  ;;                         (TeX-command-run-all) ; Compile the PDF
-  ;;                         (switch-to-buffer-other-window current-buffer)) ; Switch back to LaTeX buffer in another window
-  ;;                       )
-  ;;                     nil t))
+  (add-hook 'LaTeX-mode-hook
+            (lambda ()
+              (setq-local wc-count-words-function
+                          (function (lambda (rstart rend)
+                                      (let* ((output-buffer-name "*detex-output*")
+                                             (output-buffer (generate-new-buffer output-buffer-name)))
+                                        (unwind-protect
+                                            (progn
+                                              (call-process-region rstart rend "detex"
+                                                                   nil output-buffer-name nil)
+                                              (with-current-buffer output-buffer
+                                                (count-words (point-min) (point-max))))
+                                          (kill-buffer output-buffer))))))))
 #+end_src
 
 ** Markdown
@@ -716,6 +739,32 @@ Install *arduino-cli-mode* for compiling and uploading:
     :custom
     (arduino-cli-warnings 'all)
     (arduino-cli-verify t))
+#+end_src
+
+* Python
+** Pyenv mode
+#+begin_src emacs-lisp
+  (use-package pyenv-mode
+    :ensure t
+    :config
+    (pyenv-mode)
+    )
+#+end_src
+
+** Keybindings
+#+begin_src emacs-lisp
+  (my-leader-def python-mode-map
+    "c" '("Python" . (keymap))
+
+    "c i" '("Interactive shell" . run-python)
+    "c c" '("Python3 command" .
+            (lambda () (interactive)
+              (async-shell-command (concat "python3 " (read-from-minibuffer "python3 ")))
+              ))
+
+    "c p" '("Set pyenv version" . pyenv-mode-set)
+    "c P" '("Disable pyenv" . pyenv-mode-unset)
+    )
 #+end_src
 
 * Misc. languages
