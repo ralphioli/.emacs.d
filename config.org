@@ -630,6 +630,7 @@ Inserting headings (ctrl-enter) but 0.001% faster by going into insert mode:
     "c b R" '("Remove result" . org-babel-remove-result)
     "c b C-r" '("Remove ALL results" .
                 (lambda () (interactive) (org-babel-remove-result-one-or-many 1)))
+    "c b t" '("Tangle" . org-babel-tangle)
 
     ;; For working with images
     "c i" '("Image" . (keymap))
