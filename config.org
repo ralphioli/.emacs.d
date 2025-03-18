@@ -1,7 +1,5 @@
 #+TITLE: Emacs Config
 #+AUTHOR: Ralph Dreijer
-#+STARTUP: overview
-#+STARTUP: latexpreview
 
 * General
 ** Load use-package
@@ -136,58 +134,58 @@ Fix which-key (copied from [[https://github.com/roman/golden-ratio.el/issues/82#
     :config
     (progn
       (setq treemacs-collapse-dirs                   (if treemacs-python-executable 3 0)
-            treemacs-deferred-git-apply-delay        0.5
-            treemacs-directory-name-transformer      #'identity
-            treemacs-display-in-side-window          t
-            treemacs-eldoc-display                   'simple
-            treemacs-file-event-delay                2000
-            treemacs-file-extension-regex            treemacs-last-period-regex-value
-            treemacs-file-follow-delay               0.2
-            treemacs-file-name-transformer           #'identity
-            treemacs-follow-after-init               t
-            treemacs-expand-after-init               t
-            treemacs-find-workspace-method           'find-for-file-or-pick-first
-            treemacs-git-command-pipe                ""
-            treemacs-goto-tag-strategy               'refetch-index
-            treemacs-header-scroll-indicators        '(nil . "^^^^^^")
-            treemacs-hide-dot-git-directory          t
-            treemacs-indentation                     2
-            treemacs-indentation-string              " "
-            treemacs-is-never-other-window           nil
-            treemacs-max-git-entries                 5000
-            treemacs-missing-project-action          'ask
-            treemacs-move-files-by-mouse-dragging    t
-            treemacs-move-forward-on-expand          nil
-            treemacs-no-png-images                   nil
-            treemacs-no-delete-other-windows         t
-            treemacs-project-follow-cleanup          nil
-            treemacs-persist-file                    (expand-file-name ".cache/treemacs-persist" user-emacs-directory)
-            treemacs-position                        'left
-            treemacs-read-string-input               'from-child-frame
-            treemacs-recenter-distance               0.1
-            treemacs-recenter-after-file-follow      nil
-            treemacs-recenter-after-tag-follow       nil
-            treemacs-recenter-after-project-jump     'always
-            treemacs-recenter-after-project-expand   'on-distance
-            treemacs-litter-directories              '("/node_modules" "/.venv" "/.cask")
-            treemacs-project-follow-into-home        nil
-            treemacs-show-cursor                     nil
-            treemacs-show-hidden-files               t
-            treemacs-silent-filewatch                nil
-            treemacs-silent-refresh                  nil
-            treemacs-sorting                         'alphabetic-asc
-            treemacs-select-when-already-in-treemacs 'move-back
-            treemacs-space-between-root-nodes        t
-            treemacs-tag-follow-cleanup              t
-            treemacs-tag-follow-delay                1.5
-            treemacs-text-scale                      nil
-            treemacs-user-mode-line-format           nil
-            treemacs-user-header-line-format         nil
-            treemacs-wide-toggle-width               70
-            treemacs-width                           35
-            treemacs-width-increment                 1
-            treemacs-width-is-initially-locked       t
-            treemacs-workspace-switch-cleanup        nil)
+	    treemacs-deferred-git-apply-delay        0.5
+	    treemacs-directory-name-transformer      #'identity
+	    treemacs-display-in-side-window          t
+	    treemacs-eldoc-display                   'simple
+	    treemacs-file-event-delay                2000
+	    treemacs-file-extension-regex            treemacs-last-period-regex-value
+	    treemacs-file-follow-delay               0.2
+	    treemacs-file-name-transformer           #'identity
+	    treemacs-follow-after-init               t
+	    treemacs-expand-after-init               t
+	    treemacs-find-workspace-method           'find-for-file-or-pick-first
+	    treemacs-git-command-pipe                ""
+	    treemacs-goto-tag-strategy               'refetch-index
+	    treemacs-header-scroll-indicators        '(nil . "^^^^^^")
+	    treemacs-hide-dot-git-directory          t
+	    treemacs-indentation                     2
+	    treemacs-indentation-string              " "
+	    treemacs-is-never-other-window           nil
+	    treemacs-max-git-entries                 5000
+	    treemacs-missing-project-action          'ask
+	    treemacs-move-files-by-mouse-dragging    t
+	    treemacs-move-forward-on-expand          nil
+	    treemacs-no-png-images                   nil
+	    treemacs-no-delete-other-windows         t
+	    treemacs-project-follow-cleanup          nil
+	    treemacs-persist-file                    (expand-file-name ".cache/treemacs-persist" user-emacs-directory)
+	    treemacs-position                        'left
+	    treemacs-read-string-input               'from-child-frame
+	    treemacs-recenter-distance               0.1
+	    treemacs-recenter-after-file-follow      nil
+	    treemacs-recenter-after-tag-follow       nil
+	    treemacs-recenter-after-project-jump     'always
+	    treemacs-recenter-after-project-expand   'on-distance
+	    treemacs-litter-directories              '("/node_modules" "/.venv" "/.cask")
+	    treemacs-project-follow-into-home        nil
+	    treemacs-show-cursor                     nil
+	    treemacs-show-hidden-files               t
+	    treemacs-silent-filewatch                nil
+	    treemacs-silent-refresh                  nil
+	    treemacs-sorting                         'alphabetic-asc
+	    treemacs-select-when-already-in-treemacs 'move-back
+	    treemacs-space-between-root-nodes        t
+	    treemacs-tag-follow-cleanup              t
+	    treemacs-tag-follow-delay                1.5
+	    treemacs-text-scale                      nil
+	    treemacs-user-mode-line-format           nil
+	    treemacs-user-header-line-format         nil
+	    treemacs-wide-toggle-width               70
+	    treemacs-width                           35
+	    treemacs-width-increment                 1
+	    treemacs-width-is-initially-locked       t
+	    treemacs-workspace-switch-cleanup        nil)
 
       ;; The default width and height of the icons is 22 pixels. If you are
       ;; using a Hi-DPI display, uncomment this to double the icon size.
@@ -197,25 +195,26 @@ Fix which-key (copied from [[https://github.com/roman/golden-ratio.el/issues/82#
       (treemacs-filewatch-mode t)
       (treemacs-fringe-indicator-mode 'always)
       (when treemacs-python-executable
-        (treemacs-git-commit-diff-mode t))
+	(treemacs-git-commit-diff-mode t))
 
       (pcase (cons (not (null (executable-find "git")))
-                   (not (null treemacs-python-executable)))
-        (`(t . t)
-         (treemacs-git-mode 'deferred))
-        (`(t . _)
-         (treemacs-git-mode 'simple)))
+		   (not (null treemacs-python-executable)))
+	(`(t . t)
+	 (treemacs-git-mode 'deferred))
+	(`(t . _)
+	 (treemacs-git-mode 'simple)))
 
       (treemacs-hide-gitignored-files-mode nil))
     :bind
     (:map global-map
-          ("M-0"       . treemacs-select-window)
-          ("C-x t 1"   . treemacs-delete-other-windows)
-          ("<f1>"   . treemacs)
-          ("C-x t d"   . treemacs-select-directory)
-          ("C-x t B"   . treemacs-bookmark)
-          ("C-x t C-t" . treemacs-find-file)
-          ("C-x t M-t" . treemacs-find-tag)))
+	  ("C-/"       . treemacs-select-window)
+	  ;; ("C-x t 1"   . treemacs-delete-other-windows)
+	  ("<f1>"   . treemacs)
+	  ;; ("C-x t d"   . treemacs-select-directory)
+	  ;; ("C-x t B"   . treemacs-bookmark)
+	  ;; ("C-x t C-t" . treemacs-find-file)
+	  ;; ("C-x t M-t" . treemacs-find-tag)
+	  ))
 
   (use-package treemacs-evil
     :after (treemacs evil)
@@ -373,6 +372,33 @@ Make an ivy menu for it:
       ))
 #+end_src
 
+** Open current buffer externally
+Largely copied from treemacs-interface.el (treemacs-visit-node-in-external-application)
+
+#+begin_src emacs-lisp
+  (defun open-this-externally ()
+    "Open current file according to its mime type in an external application.
+  Treemacs knows how to open files on linux, windows and macos."
+    (interactive)
+    ;; code adapted from ranger.el
+    (-if-let (path (buffer-file-name))
+        (pcase system-type
+          ('windows-nt
+           (declare-function w32-shell-execute "w32fns.c")
+           (w32-shell-execute "open" (replace-regexp-in-string "/" "\\" path t t)))
+          ('darwin
+           (shell-command (format "open \"%s\"" path)))
+          ('gnu/linux
+           (let (process-connection-type)
+             (start-process
+              "" nil "sh" "-c"
+              ;; XXX workaround for #633
+              (format "xdg-open %s; sleep 1"
+                      (shell-quote-argument path)))))
+          (_ (message "Don't know how to open files on %s.")))
+      (message "Nothing to open here.")))
+#+end_src
+
 * Keybindings
 ** Evil mode
 Setup vim-like keybindings using evil-mode:
@@ -458,17 +484,17 @@ Use *evil-goggles* to give visual feedback:
 Install general.el and define some global keybindings.
 #+begin_src emacs-lisp
   (use-package general
-  :config
-  (general-evil-setup)
+    :config
+    (general-evil-setup)
 
-  ;; set up 'SPC' as the global leader key
-  (general-create-definer my-leader-def
+    ;; set up 'SPC' as the global leader key
+    (general-create-definer my-leader-def
       :states '(normal insert visual emacs treemacs)
       :keymaps 'override
       :prefix "SPC" ;; set leader
       :global-prefix "C-SPC") ;; access leader in insert mode
 
-  (my-leader-def
+    (my-leader-def
       "SPC" '(counsel-M-x :wk "Run Command")
       "." '(counsel-command-history :wk "Command History")
 
@@ -488,6 +514,17 @@ Install general.el and define some global keybindings.
       "f o" '(find-file-other-window :wk "Find file Other window")
       "f r" '(counsel-recentf :wk "Recent files")
       "f s" '(find-file-ssh :wk "Find file (SSH)")
+      ;; Treemacs
+      "f t" '(:ignore t :wk "Treemacs")
+      "f t a" '(treemacs-add-project-to-workspace :wk "Add project to workspace")
+      "f t c" '(treemacs-create-workspace :wk "Create workspace")
+      "f t d" '(treemacs-remove-workspace :wk "Delete workspace")
+      "f t e" '(treemacs-edit-workspaces :wk "Edit workspaces")
+      "f t r" '(treemacs-remove-project-from-workspace :wk "Remove project from workspace")
+      "f t s" '((lambda () (interactive)
+  		(let (treemacs-select-when-already-in-treemacs stay)
+  		  (treemacs-select-window t)))
+  	      :wk "Switch workspace")
 
       ;; GIT
       "g" '(:ignore t :wk "Git")
@@ -557,24 +594,86 @@ To see what keybindings actually do...
 
 * Text editing: Org Mode, LaTeX, etc.
 ** Org Mode
-*Org-tempo* allows for example '<s' to be expanded to a source block
-#+begin_src emacs-lisp
-  (require 'org-tempo)
-#+end_src
-
+*** Hooks
 Automatically enable org-indent-mode, visual-line-mode
+*Org-tempo* allows for example '<s' to be expanded to a source block
 #+begin_src emacs-lisp
   (add-hook 'org-mode-hook 'org-indent-mode)
   (add-hook 'org-mode-hook 'visual-line-mode)
+  (add-hook 'org-mode-hook (lambda () (require 'org-tempo)))
 #+end_src
 
+*** Variables
+**** LaTeX syntax highlighting
 Setup $\LaTeX$ syntax highlighting
 #+begin_src emacs-lisp
   (setq org-highlight-latex-and-related '(latex script entities))
   (setq org-format-latex-options (plist-put org-format-latex-options :scale 1.5))
 #+end_src
 
-Set misc. other variables
+**** LaTeX export settings
+Define LaTeX classes:
+#+begin_src emacs-lisp
+  (setq org-latex-classes 
+        '(("article" "\\documentclass[11pt,a4paper]{article} \\usepackage[margin=2.5cm]{geometry}"
+  	 ("\\section{%s}" . "\\section*{%s}")
+  	 ("\\subsection{%s}" . "\\subsection*{%s}")
+  	 ("\\subsubsection{%s}" . "\\subsubsection*{%s}")
+  	 ("\\paragraph{%s}" . "\\paragraph*{%s}")
+  	 ("\\subparagraph{%s}" . "\\subparagraph*{%s}"))
+  	("notes" "\\documentclass[11pt,a4paper,twocolumn]{article} \\usepackage[margin=1.5cm]{geometry}"
+  	 ("\\section{%s}" . "\\section*{%s}")
+  	 ("\\subsection{%s}" . "\\subsection*{%s}")
+  	 ("\\subsubsection{%s}" . "\\subsubsection*{%s}")
+  	 ("\\paragraph{%s}" . "\\paragraph*{%s}")
+  	 ("\\subparagraph{%s}" . "\\subparagraph*{%s}"))
+  	("report" "\\documentclass[11pt,a4paper]{report} \\usepackage[margin=2.5cm]{geometry}"
+  	 ;; ("\\part{%s}" . "\\part*{%s}")
+  	 ("\\chapter{%s}" . "\\chapter*{%s}")
+  	 ("\\section{%s}" . "\\section*{%s}")
+  	 ("\\subsection{%s}" . "\\subsection*{%s}")
+  	 ("\\subsubsection{%s}" . "\\subsubsection*{%s}")
+  	 ("\\paragraph{%s}" . "\\paragraph*{%s}")
+  	 ("\\subparagraph{%s}" . "\\subparagraph*{%s}"))
+  	("book" "\\documentclass[11pt,a4paper]{book}"
+  	 ("\\part{%s}" . "\\part*{%s}")
+  	 ("\\chapter{%s}" . "\\chapter*{%s}")
+  	 ("\\section{%s}" . "\\section*{%s}")
+  	 ("\\subsection{%s}" . "\\subsection*{%s}")
+  	 ("\\subsubsection{%s}" . "\\subsubsection*{%s}"))))
+#+end_src
+
+Set default class to notes:
+#+begin_src emacs-lisp
+  (setq org-latex-default-class "notes")
+#+end_src
+
+Default export options:
+#+begin_src emacs-lisp
+  (setq
+   org-export-headline-levels 6
+   org-export-with-priority nil
+   org-export-with-statistics-cookies nil
+   org-export-with-tags nil
+   org-export-with-toc nil
+   org-export-with-todo-keywords nil
+   )
+#+end_src
+
+**** Startup options
+#+begin_src emacs-lisp
+  (setq
+   org-startup-folded 'overview
+   org-startup-with-inline-images t
+   org-startup-with-latex-preview t
+   org-pretty-entities t
+   )
+#+end_src
+
+#+RESULTS:
+: t
+
+**** Misc. other variables
 #+begin_src emacs-lisp
   (setq org-image-actual-width 400)
   (setq org-return-follows-link t)
@@ -597,7 +696,8 @@ For inserting images
 #+end_src
 
 *** (Slightly) better versions of org commands
-org-indent-block, but the cursor doesn't have to be at the head of a block:
+**** org-indent-block
+...but the cursor doesn't have to be at the head of a block
 #+begin_src emacs-lisp
   (defun better-org-indent-block ()
     (interactive)
@@ -606,6 +706,7 @@ org-indent-block, but the cursor doesn't have to be at the head of a block:
     )
 #+end_src
 
+**** org-insert-heading
 Inserting headings (ctrl-enter) but 0.001% faster by going into insert mode:
 #+begin_src emacs-lisp
   (defun better-org-insert-heading ()
@@ -616,6 +717,35 @@ Inserting headings (ctrl-enter) but 0.001% faster by going into insert mode:
 
   (with-eval-after-load "org"
     (define-key org-mode-map (kbd "C-<return>") #'better-org-insert-heading))
+#+end_src
+
+**** org-insert-link
+Define a function for inserting a link from a url (and adds title as description):
+#+begin_src emacs-lisp
+  (defun org-insert-link-from-url (url)
+    (org-insert-link nil url
+                     (with-current-buffer (url-retrieve-synchronously url)
+                       (goto-char (point-min))
+                       (re-search-forward "\n\n") ;; Skip HTTP headers
+                       (let ((dom (libxml-parse-html-region (point) (point-max))))
+                         (dom-text (car (dom-by-tag dom 'title)))
+                         ))))
+#+end_src
+
+Define a command that:
+1) Currently at link? Call org-insert-link interactively
+2) Clipboard contains url? Call org-insert-link-from-url
+3) Else call org-insert-link interactively
+#+begin_src emacs-lisp
+  (defun better-org-insert-link ()
+    (interactive)
+    (if (org-in-regexp org-link-bracket-re 1)
+        (call-interactively #'org-insert-link)
+      (let ((clip (string-clean-whitespace (current-kill 0))))
+        (if (string-match "^https?://[^ ]+$" clip)
+            (org-insert-link-from-url clip)
+          (call-interactively #'org-insert-link)
+          ))))
 #+end_src
 
 *** Keybindings
@@ -642,8 +772,10 @@ Inserting headings (ctrl-enter) but 0.001% faster by going into insert mode:
     ;; Other misc shortcuts
     "c c" '("Context action" . org-ctrl-c-ctrl-c)
     "c e" '("Export" . org-export-dispatch)
-    "c l" '("Toggle LaTeX preview" . org-latex-preview)
+    "c l" '("Insert link" . better-org-insert-link)
+    "c L" '("Toggle LaTeX preview" . org-latex-preview)
     "c h" '("Toggle heading" . org-toggle-heading)
+    "c p" '("Toggle pretty entities" . org-toggle-pretty-entities)
     )
 #+end_src
 
@@ -723,8 +855,18 @@ Use detex output for word count
     )
 #+end_src
 
-* Arduino
+* Web development
+** Launch HTTP Server
+#+begin_src emacs-lisp
+  (defun http-server () (interactive)
+         (let ((dir (read-from-minibuffer "Directory: " default-directory))
+               (port (read-from-minibuffer "Port: " "8000")))
+           (async-shell-command (concat "python3 -m http.server -d " dir " " port)
+                                (concat "*HTTP Server on port " port " [" dir "]*"))
+           (start-process "" nil "firefox" "--new-tab" (concat "http://localhost:" port))))
+#+end_src
 
+* Arduino
 Install *arduino-mode* for syntax highlighting:
 #+begin_src emacs-lisp
   (use-package arduino-mode
