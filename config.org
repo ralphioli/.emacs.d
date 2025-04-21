@@ -715,8 +715,15 @@ Inserting headings (ctrl-enter) but 0.001% faster by going into insert mode:
     (evil-insert 1)
     )
 
+  (defun better-org-insert-todo-heading ()
+    (interactive)
+    (org-insert-todo-heading-respect-content)
+    (evil-insert 1)
+    )
+
   (with-eval-after-load "org"
-    (define-key org-mode-map (kbd "C-<return>") #'better-org-insert-heading))
+    (define-key org-mode-map (kbd "C-<return>") #'better-org-insert-heading)
+    (define-key org-mode-map (kbd "C-S-<return>") #'better-org-insert-todo-heading))
 #+end_src
 
 **** org-insert-link
