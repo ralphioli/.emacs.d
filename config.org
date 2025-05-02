@@ -670,9 +670,6 @@ Default export options:
    )
 #+end_src
 
-#+RESULTS:
-: t
-
 **** Misc. other variables
 #+begin_src emacs-lisp
   (setq org-image-actual-width 400)
@@ -783,6 +780,7 @@ Define a command that:
     "c L" '("Toggle LaTeX preview" . org-latex-preview)
     "c h" '("Toggle heading" . org-toggle-heading)
     "c p" '("Toggle pretty entities" . org-toggle-pretty-entities)
+    "c s" '("Sort" . org-sort)
     )
 #+end_src
 
@@ -828,7 +826,9 @@ Open PDFs in Emacs:
   (my-leader-def LaTeX-mode-map
     "c" '("LaTeX" . (keymap))
 
+    "c a" '("Run all commands" . TeX-command-run-all)
     "c c" '("Command" . TeX-command-master)
+    "c e" '("Environment" . LaTeX-environment)
     "c s" '("Section" . LaTeX-section)
     )
 #+end_src
