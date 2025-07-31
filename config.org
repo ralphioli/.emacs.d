@@ -506,6 +506,7 @@ Install general.el and define some global keybindings.
       "b o" '(counsel-switch-buffer-other-window :wk "Switch buffer Other window")
       "b p" '(previous-buffer :wk "Previous buffer")
       "b r" '(rename-buffer :wk "Rename buffer")
+      "b s" '(scratch-buffer :wk "Scratch buffer")
       "b x" '(kill-buffer-and-window :wk "Kill buffer, close window")
 
       ;; FILES
@@ -528,6 +529,7 @@ Install general.el and define some global keybindings.
 
       ;; GIT
       "g" '(:ignore t :wk "Git")
+      "g c" '(magit-checkout :wk "Checkout")
       "g g" '(magit-status :wk "Magit")
       "g r" '(diff-hl-revert-hunk :wk "Revert hunk")
       "g s" '(diff-hl-show-hunk :wk "Show hunk")
@@ -587,9 +589,15 @@ To see what keybindings actually do...
     )
 #+end_src
 
-** Use escape key instead of ctrl-g:
+** Misc tweaks
+Use escape key instead of ctrl-g:
 #+begin_src emacs-lisp
 (global-set-key [escape] 'keyboard-escape-quit)
+#+end_src
+
+Make scratch buffer empty by default:
+#+begin_src emacs-lisp
+  (setq initial-scratch-message "")
 #+end_src
 
 * Text editing: Org Mode, LaTeX, etc.
@@ -600,7 +608,10 @@ Automatically enable org-indent-mode, visual-line-mode
 #+begin_src emacs-lisp
   (add-hook 'org-mode-hook 'org-indent-mode)
   (add-hook 'org-mode-hook 'visual-line-mode)
-  (add-hook 'org-mode-hook (lambda () (require 'org-tempo)))
+  (add-hook 'org-mode-hook (lambda ()
+  			   (require 'org-tempo)
+  			   (require 'ox-beamer)
+  			   (require 'ox-md)))
 #+end_src
 
 *** Variables
@@ -909,11 +920,16 @@ Install *arduino-cli-mode* for compiling and uploading:
     "c i" '("Interactive shell" . run-python)
     "c c" '("Python3 command" .
             (lambda () (interactive)
-              (async-shell-command (concat "python3 " (read-from-minibuffer "python3 ")))
-              ))
+              (async-shell-command (concat "python3 " (read-from-minibuffer "python3 ")))))
 
     "c p" '("Set pyenv version" . pyenv-mode-set)
     "c P" '("Disable pyenv" . pyenv-mode-unset)
+    "c s" '("Send buffer to shell" .
+  	  (lambda () (interactive)
+  	    (unless (comint-check-proc (python-shell-get-buffer))
+  	      (call-interactively #'run-python)
+  	      (sleep-for 0.5))
+  	    (call-interactively #'python-shell-send-buffer)))
     )
 #+end_src
 
