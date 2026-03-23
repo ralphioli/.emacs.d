@@ -687,6 +687,17 @@ Default export options:
   (setq org-return-follows-link t)
 #+end_src
 
+*** Attachments
+Open directory in system file manager
+#+begin_src emacs-lisp
+  (defun org-attach-reveal-in-file-manager ()
+    (interactive)
+    (let ((dir (org-attach-dir t)))
+      (start-process "xdg-open" nil "xdg-open" dir)))
+
+  (advice-add 'org-attach-reveal :override #'org-attach-reveal-in-file-manager)
+#+end_src
+
 *** Org-download
 For inserting images
 
@@ -785,6 +796,8 @@ Define a command that:
     "c i P" '("Paste from link" . org-download-yank)
 
     ;; Other misc shortcuts
+    "c a" '("Attach" . org-attach)
+    "c C-a" '("Archive subtree" . org-archive-subtree)
     "c c" '("Context action" . org-ctrl-c-ctrl-c)
     "c e" '("Export" . org-export-dispatch)
     "c l" '("Insert link" . better-org-insert-link)
@@ -830,6 +843,45 @@ Open PDFs in Emacs:
   ;; Update PDF buffers after successful LaTeX runs
   (add-hook 'TeX-after-compilation-finished-functions
             #'TeX-revert-document-buffer)
+#+end_src
+
+*** Custom functions
+*LaTeX-insert-item*, but:
++ Inserts /itemize/ env. if not in suitable environment
++ Automatically goes to insert mode
+
+#+begin_src emacs-lisp
+  (defun better-LaTeX-insert-item ()
+    (interactive)
+    (let ((environment (LaTeX-current-environment)))
+      (when (and (TeX-active-mark)
+                 (> (point) (mark)))
+        (exchange-point-and-mark))
+      (if (save-excursion
+            ;; If the current line has only whitespace characters, put
+            ;; the new \item on this line, not creating a new line
+            ;; below.
+            (goto-char (line-beginning-position))
+            (if LaTeX-insert-into-comments
+                (re-search-forward
+                 (concat "\\=" TeX-comment-start-regexp "+")
+                 (line-end-position) t))
+            (looking-at "[ \t]*$"))
+          (delete-region (match-beginning 0) (match-end 0))
+        (progn (end-of-line) (LaTeX-newline)))
+
+      (if (not (or (string-prefix-p "item" environment)
+  		 (string-prefix-p "enum" environment)))
+  	(LaTeX-insert-environment "itemize"))
+
+      (TeX-insert-macro "item")
+      (indent-according-to-mode)
+      (evil-insert 1)
+      ))
+
+  (with-eval-after-load 'latex
+    (define-key LaTeX-mode-map (kbd "M-<return>") #'better-LaTeX-insert-item)
+    )
 #+end_src
 
 *** Keybindings
