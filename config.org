@@ -63,7 +63,7 @@ Don't show all minor modes in the mode line
   (menu-bar-mode -1) ;; Hide menubar
 
   (setq inhibit-startup-screen t) ;; Disable startup screen
-  (add-to-list 'initial-frame-alist '(fullscreen . maximized)) ;; Maximize on startup
+  (add-to-list 'default-frame-alist '(fullscreen . maximized)) ;; Maximize frames by default
 
   (setopt use-short-answers t) ;; use y/n in prompts instead of typing out yes/no
 #+end_src
@@ -498,12 +498,14 @@ Install general.el and define some global keybindings.
       "SPC" '(counsel-M-x :wk "Run Command")
       "." '(counsel-command-history :wk "Command History")
 
+      ;; BUFFERS
       "b" '(:ignore t :wk "Buffers")
       "b b" '(counsel-switch-buffer :wk "Switch to buffer")
       "b i" '(ibuffer :wk "Ibuffer")
       "b k" '(kill-current-buffer :wk "Kill this buffer")
       "b n" '(next-buffer :wk "Next buffer")
       "b o" '(counsel-switch-buffer-other-window :wk "Switch buffer Other window")
+      "b O" '(switch-to-buffer-other-frame :wk "Switch buffer Other frame")
       "b p" '(previous-buffer :wk "Previous buffer")
       "b r" '(rename-buffer :wk "Rename buffer")
       "b s" '(scratch-buffer :wk "Scratch buffer")
@@ -569,12 +571,26 @@ Install general.el and define some global keybindings.
       "w k" '(evil-window-up :wk "Window up")
       "w l" '(evil-window-right :wk "Window right")
       "w w" '(evil-window-next :wk "Goto next window")
+      "w W" '(evil-window-prev :wk "Goto previous window")
       ;; Move Windows
       "w H" '(buf-move-left :wk "Buffer move left")
       "w J" '(buf-move-down :wk "Buffer move down")
       "w K" '(buf-move-up :wk "Buffer move up")
       "w L" '(buf-move-right :wk "Buffer move right")
       ))
+#+end_src
+
+** Frame keybindings
++ *Ctrl+Shift+N*: New frame
++ *Ctrl+Shift+W*: Close frame
++ *Ctrl+Tab*: Next frame
++ *Ctrl+Shift+Tab*: Previous frame
+
+#+begin_src emacs-lisp
+  (keymap-global-set "C-S-n" #'make-frame)
+  (keymap-global-set "C-S-w" #'delete-frame)
+  (keymap-global-set "C-<tab>" #'other-frame)
+  (keymap-global-set "C-<iso-lefttab>" (lambda () (interactive) (other-frame -1)))
 #+end_src
 
 ** Which key
