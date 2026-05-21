@@ -70,7 +70,7 @@ Don't show all minor modes in the mode line
 
 Enable line numbering:
 #+begin_src emacs-lisp
-  (setq display-line-numbers-type 'relative)
+  (setq display-line-numbers-type 'visual)
   (add-hook 'prog-mode-hook #'display-line-numbers-mode)
   (add-hook 'text-mode-hook #'display-line-numbers-mode)
 #+end_src
@@ -714,6 +714,14 @@ Open directory in system file manager
   (advice-add 'org-attach-reveal :override #'org-attach-reveal-in-file-manager)
 #+end_src
 
+Open PDF files in system viewer
+#+begin_src emacs-lisp
+(with-eval-after-load 'org
+  (setq org-file-apps
+        (cons '("\\.pdf\\'" . "xdg-open %s")
+              (assoc-delete-all "\\.pdf\\'" org-file-apps))))
+#+end_src
+
 *** Org-download
 For inserting images
 
@@ -860,6 +868,11 @@ Open PDFs in Emacs:
   (add-hook 'TeX-after-compilation-finished-functions
             #'TeX-revert-document-buffer)
 #+end_src
+*** latex-preview
+#+begin_src emacs-lisp
+(setq preview-default-option-list '("displaymath" "textmath" "graphics"))
+(setq preview-auto-reveal t)
+#+end_src
 
 *** Custom functions
 *LaTeX-insert-item*, but:
@@ -909,6 +922,12 @@ Open PDFs in Emacs:
     "c c" '("Command" . TeX-command-master)
     "c e" '("Environment" . LaTeX-environment)
     "c s" '("Section" . LaTeX-section)
+
+    "c q" '("Fill" . (keymap))
+    "c q e" '("Fill environment" . LaTeX-fill-environment)
+    "c q p" '("Fill paragraph" . LaTeX-fill-paragraph)
+    "c q r" '("Fill region" . LaTeX-fill-region)
+    "c q s" '("Fill section" . LaTeX-fill-section)
     )
 #+end_src
 
@@ -929,6 +948,7 @@ Use detex output for word count
                                                 (count-words (point-min) (point-max))))
                                           (kill-buffer output-buffer))))))))
 #+end_src
+
 
 ** Markdown
 #+begin_src emacs-lisp
