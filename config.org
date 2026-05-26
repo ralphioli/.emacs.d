@@ -70,7 +70,7 @@ Don't show all minor modes in the mode line
 
 Enable line numbering:
 #+begin_src emacs-lisp
-  (setq display-line-numbers-type 'visual)
+  (setq display-line-numbers-type 'relative)
   (add-hook 'prog-mode-hook #'display-line-numbers-mode)
   (add-hook 'text-mode-hook #'display-line-numbers-mode)
 #+end_src
@@ -851,6 +851,7 @@ Install AucTeX and do some [[https://www.emacswiki.org/emacs/AUCTeX#h5o-2][custo
   (setq-default TeX-master nil)
 
   (add-hook 'LaTeX-mode-hook 'visual-line-mode)
+  (add-hook 'LaTeX-mode-hook 'auto-fill-mode)
   (add-hook 'LaTeX-mode-hook 'flyspell-mode)
   (add-hook 'LaTeX-mode-hook 'LaTeX-math-mode)
 
@@ -948,7 +949,6 @@ Use detex output for word count
                                                 (count-words (point-min) (point-max))))
                                           (kill-buffer output-buffer))))))))
 #+end_src
-
 
 ** Markdown
 #+begin_src emacs-lisp
