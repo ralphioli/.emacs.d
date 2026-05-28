@@ -37,7 +37,7 @@ Source scripts:
 #+begin_src emacs-lisp
   (use-package dracula-theme
    :config
-   (load-theme 'dracula)
+   (load-theme 'dracula t)
   )
 #+end_src
 
@@ -103,7 +103,7 @@ Copied from [[https://gitlab.com/dwt1/configuring-emacs/-/blob/main/07-the-final
     (ivy-mode))
 #+end_src
 
-** Golden ratio
+** COMMENT Golden ratio
 Auto-resize windows
 #+begin_src emacs-lisp
   (use-package golden-ratio
@@ -245,7 +245,7 @@ Fix which-key (copied from [[https://github.com/roman/golden-ratio.el/issues/82#
   (treemacs-start-on-boot)
 #+end_src
 
-** Auto-Complete
+** COMMENT Auto-Complete
 #+begin_src emacs-lisp
   (use-package auto-complete
     :ensure t
@@ -399,6 +399,14 @@ Largely copied from treemacs-interface.el (treemacs-visit-node-in-external-appli
       (message "Nothing to open here.")))
 #+end_src
 
+** Snippets
+#+begin_src emacs-lisp
+      (use-package yasnippet
+        :ensure t
+        :config
+        (yas-global-mode 1))
+#+end_src
+
 * Keybindings
 ** Evil mode
 Setup vim-like keybindings using evil-mode:
@@ -495,8 +503,7 @@ Install general.el and define some global keybindings.
       :global-prefix "C-SPC") ;; access leader in insert mode
 
     (my-leader-def
-      "SPC" '(counsel-M-x :wk "Run Command")
-      "." '(counsel-command-history :wk "Command History")
+      "SPC" '(counsel-imenu :wk "Imenu")
 
       ;; BUFFERS
       "b" '(:ignore t :wk "Buffers")
@@ -577,6 +584,11 @@ Install general.el and define some global keybindings.
       "w J" '(buf-move-down :wk "Buffer move down")
       "w K" '(buf-move-up :wk "Buffer move up")
       "w L" '(buf-move-right :wk "Buffer move right")
+
+      ;; COMMAND
+      "x" '(:ignore t :wk "Command")
+      "x x" '(counsel-M-x :wk "Run Command")
+      "x h" '(counsel-command-history :wk "Command History")
       ))
 #+end_src
 
@@ -625,7 +637,7 @@ Automatically enable org-indent-mode, visual-line-mode
   (add-hook 'org-mode-hook 'org-indent-mode)
   (add-hook 'org-mode-hook 'visual-line-mode)
   (add-hook 'org-mode-hook (lambda ()
-  			   (require 'org-tempo)
+  			   ;; (require 'org-tempo)
   			   (require 'ox-beamer)
   			   (require 'ox-md)))
 #+end_src

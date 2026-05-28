@@ -1,0 +1,13 @@
+# -*- mode: snippet -*-
+# name: Source Code Block
+# key: <s
+# --
+
+#+begin_src ${1:$$(when yas-moving-away-p (pcase yas-text
+	("el" "emacs-lisp")
+	("py" "python")
+	("bib" "bibtex")
+	(_ nil)
+    ))}
+$0
+#+end_src

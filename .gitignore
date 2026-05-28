@@ -10,3 +10,11 @@
 !scripts/
 scripts/*
 !scripts/*.el
+
+# ...and snippets
+!snippets/
+!snippets/**/*
+
+# do not include backups/autosaves
+*~
+\#*\#
