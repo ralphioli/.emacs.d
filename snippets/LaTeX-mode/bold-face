@@ -1,0 +1,5 @@
+# -*- mode: snippet -*-
+# name: Bold Face math/text
+# key: bf
+# --
+`(if (texmathp) "\\math" "\\text")`bf{$1} $0

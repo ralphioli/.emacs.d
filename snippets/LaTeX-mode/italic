@@ -1,0 +1,5 @@
+# -*- mode: snippet -*-
+# name: Italic math/text
+# key: it
+# --
+`(if (texmathp) "\\math" "\\text")`it{$1} $0
