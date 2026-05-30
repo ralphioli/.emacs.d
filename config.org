@@ -1,14 +1,62 @@
 #+TITLE: Emacs Config
 #+AUTHOR: Ralph Dreijer
+#+PROPERTY: header-args:emacs-lisp :tangle ./init.el :mkdirp yes
 
 * General setup
-** Load use-package
+** Startup performance
+[[https://github.com/daviwil/emacs-from-scratch/blob/d23348b4a52dde97f4f7cbcd66a519b5fd0a143c/Emacs.org#startup-performance][emacs-from-scratch/Emacs.org at d23348b4a52dde97f4f7cbcd66a519b5fd0a143c · daviwil/emacs-from-scratch · GitHub]]
+#+begin_src emacs-lisp
+  ;; The default is 800 kilobytes.  Measured in bytes.
+  ;; (setq gc-cons-threshold (* 50 1000 1000))
+
+  (defun efs/display-startup-time ()
+    (message "Emacs loaded in %s with %d garbage collections."
+             (format "%.2f seconds"
+                     (float-time
+                       (time-subtract after-init-time before-init-time)))
+             gcs-done))
+
+  (add-hook 'emacs-startup-hook #'efs/display-startup-time)
+#+end_src
+** Package management
+*** straight.el
+Bootstrap code:
+#+begin_src emacs-lisp
+(defvar bootstrap-version)
+(let ((bootstrap-file
+       (expand-file-name
+        "straight/repos/straight.el/bootstrap.el"
+        (or (bound-and-true-p straight-base-dir)
+            user-emacs-directory)))
+      (bootstrap-version 7))
+  (unless (file-exists-p bootstrap-file)
+    (with-current-buffer
+        (url-retrieve-synchronously
+         "https://raw.githubusercontent.com/radian-software/straight.el/develop/install.el"
+         'silent 'inhibit-cookies)
+      (goto-char (point-max))
+      (eval-print-last-sexp)))
+  (load bootstrap-file nil 'nomessage))
+#+end_src
+
+Prevent =package.el= from loading:
+#+begin_src emacs-lisp :tangle ./early-init.el
+(setq package-enable-at-startup nil)
+#+end_src
+*** use-package
+#+begin_src emacs-lisp
+  (require 'use-package)
+  (straight-use-package 'use-package)
+  (setq use-package-compute-statistics t)
+#+end_src
+** COMMENT Load use-package
 #+begin_src emacs-lisp
   (require 'package)
   (require 'use-package)
   (require 'use-package-ensure)
 
   (setq use-package-always-ensure t)
+  (setq use-package-compute-statistics t)
   (package-initialize)
 
   (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
@@ -121,6 +169,7 @@ Make an ivy menu for it:
 ** Dracula theme
 #+begin_src emacs-lisp
   (use-package dracula-theme
+    :straight t
    :config
    (load-theme 'dracula t)
   )
@@ -131,13 +180,13 @@ Make an ivy menu for it:
 Don't show all minor modes in the mode line
 #+begin_src emacs-lisp
   (use-package diminish
-    :ensure t)
+    :straight t)
 #+end_src
 
-*** Show word count
+*** COMMENT Show word count
 #+begin_src emacs-lisp
   (use-package wc-mode
-    :ensure t
+    :straight t
     )
 #+end_src
 
@@ -168,6 +217,7 @@ Copied from [[https://gitlab.com/dwt1/configuring-emacs/-/blob/main/07-the-final
 
 #+begin_src emacs-lisp
   (use-package counsel
+    :straight t
     :after ivy
     :diminish counsel
     :config 
@@ -175,6 +225,7 @@ Copied from [[https://gitlab.com/dwt1/configuring-emacs/-/blob/main/07-the-final
       (setq ivy-initial-inputs-alist nil)) ;; removes starting ^ regex in M-x
 
   (use-package ivy
+    :straight t
     :bind
     ;; ivy-resume resumes the last Ivy-based completion.
     (("C-c C-r" . ivy-resume)
@@ -191,7 +242,7 @@ Copied from [[https://gitlab.com/dwt1/configuring-emacs/-/blob/main/07-the-final
 ** Treemacs
 #+begin_src emacs-lisp
   (use-package treemacs
-    :ensure t
+    :straight t
     :defer t
     :init
     (with-eval-after-load 'winum
@@ -283,28 +334,28 @@ Copied from [[https://gitlab.com/dwt1/configuring-emacs/-/blob/main/07-the-final
 
   (use-package treemacs-evil
     :after (treemacs evil)
-    :ensure t)
+    :straight t)
 
   ;; (use-package treemacs-projectile
   ;;   :after (treemacs projectile)
-  ;;   :ensure t)
+  ;;   :straight t)
 
   (use-package treemacs-icons-dired
     :hook (dired-mode . treemacs-icons-dired-enable-once)
-    :ensure t)
+    :straight t)
 
   (use-package treemacs-magit
     :after (treemacs magit)
-    :ensure t)
+    :straight t)
 
   ;; (use-package treemacs-persp ;;treemacs-perspective if you use perspective.el vs. persp-mode
   ;;   :after (treemacs persp-mode) ;;or perspective vs. persp-mode
-  ;;   :ensure t
+  ;;   :straight t
   ;;   :config (treemacs-set-scope-type 'Perspectives))
 
   ;; (use-package treemacs-tab-bar ;;treemacs-tab-bar if you use tab-bar-mode
   ;;   :after (treemacs)
-  ;;   :ensure t
+  ;;   :straight t
   ;;   :config (treemacs-set-scope-type 'Tabs))
 
   (treemacs-start-on-boot)
@@ -314,7 +365,7 @@ Copied from [[https://gitlab.com/dwt1/configuring-emacs/-/blob/main/07-the-final
 #+begin_src emacs-lisp
   (use-package highlight-indent-guides
     :diminish
-    :ensure t
+    :straight t
     :config
     (setq highlight-indent-guides-method 'bitmap)
     (setq highlight-indent-guides-auto-character-face-perc 35)
@@ -325,7 +376,7 @@ Copied from [[https://gitlab.com/dwt1/configuring-emacs/-/blob/main/07-the-final
 ** COMMENT Auto-Complete
 #+begin_src emacs-lisp
   (use-package auto-complete
-    :ensure t
+    :straight t
     :config 
     (ac-config-default)
     )
@@ -335,14 +386,14 @@ Copied from [[https://gitlab.com/dwt1/configuring-emacs/-/blob/main/07-the-final
 ** Magit
 #+begin_src emacs-lisp
     (use-package magit
-    :ensure t
+    :straight t
   )
 #+end_src
 
 ** Diff-hl
 #+begin_src emacs-lisp
   (use-package diff-hl
-    :ensure t
+    :straight t
     :after evil
     :config
     (add-hook 'magit-pre-refresh-hook 'diff-hl-magit-pre-refresh)
@@ -358,7 +409,7 @@ Copied from [[https://gitlab.com/dwt1/configuring-emacs/-/blob/main/07-the-final
 Setup vim-like keybindings using evil-mode:
 #+begin_src emacs-lisp
   (use-package evil
-    :ensure t
+    :straight t
     :init
     (setq evil-undo-system 'undo-redo)
     (setq evil-want-fine-undo t)
@@ -377,11 +428,14 @@ Setup vim-like keybindings using evil-mode:
   (use-package evil-collection
     :diminish evil-collection-unimpaired-mode
     :after evil
-    :ensure t
+    :straight t
     :config
     (evil-collection-init)
     )
 #+end_src
+
+#+RESULTS:
+: #s(hash-table data (:use-package (27163 8739 373485 243000) :init (27163 8739 373477 180000) :config (27163 8739 373465 513000) :config-secs (0 0 24908 129000) :init-secs (0 0 29431 653000) :use-package-secs (0 0 40152 518000)))
 
 Disable evil's RET keybinding (conflicts with org-return, and is useless anyway)
 #+begin_src emacs-lisp
@@ -393,6 +447,7 @@ Add /vim-commentary/-like motions:
 #+begin_src emacs-lisp
   (use-package evil-commentary
     :diminish
+    :straight t
     :config
     (evil-commentary-mode)
     )
@@ -402,7 +457,7 @@ Use *evil-goggles* to give visual feedback:
 #+begin_src emacs-lisp
   (use-package evil-goggles
     :diminish
-    :ensure t
+    :straight t
     :config
     (evil-goggles-mode)
 
@@ -427,7 +482,7 @@ Use *evil-goggles* to give visual feedback:
 *evil-numbers*: c-a and c-x like in vim:
 #+begin_src emacs-lisp
   (use-package evil-numbers
-    :ensure t
+    :straight t
     :config
     (evil-define-key '(normal visual) 'global (kbd "C-a") 'evil-numbers/inc-at-pt)
     (evil-define-key '(normal visual) 'global (kbd "C-x") 'evil-numbers/dec-at-pt)
@@ -440,6 +495,7 @@ Use *evil-goggles* to give visual feedback:
 Install general.el and define some global keybindings.
 #+begin_src emacs-lisp
   (use-package general
+    :straight t
     :config
     (general-evil-setup)
 
@@ -557,6 +613,7 @@ Install general.el and define some global keybindings.
 To see what keybindings actually do...
 #+begin_src emacs-lisp
   (use-package which-key
+    :straight t
     :diminish
     :config
     (setq which-key-idle-delay 0)
@@ -568,7 +625,7 @@ To see what keybindings actually do...
 ** YASnippet
 #+begin_src emacs-lisp
       (use-package yasnippet
-        :ensure t
+        :straight t
         :config
         (yas-global-mode 1))
 #+end_src
@@ -584,7 +641,7 @@ Make scratch buffer empty by default:
   (setq initial-scratch-message "")
 #+end_src
 
-* Text editing
+* Text editing, Org
 ** Org Mode
 *** Hooks
 Automatically enable =org-indent-mode=, =visual-line-mode=
@@ -594,6 +651,19 @@ Automatically enable =org-indent-mode=, =visual-line-mode=
   (add-hook 'org-mode-hook (lambda ()
   			   (require 'ox-beamer)
   			   (require 'ox-md)))
+#+end_src
+
+**** Auto-tangle config
+#+begin_src emacs-lisp
+;; Automatically tangle our Emacs.org config file when we save it
+(defun efs/org-babel-tangle-config ()
+  (when (string-equal (file-name-directory (buffer-file-name))
+                      (expand-file-name user-emacs-directory))
+    ;; Dynamic scoping to the rescue
+    (let ((org-confirm-babel-evaluate nil))
+      (org-babel-tangle))))
+
+(add-hook 'org-mode-hook (lambda () (add-hook 'after-save-hook #'efs/org-babel-tangle-config)))
 #+end_src
 
 *** Variables
@@ -910,7 +980,7 @@ Use detex output for word count
 ** Markdown
 #+begin_src emacs-lisp
   (use-package markdown-mode
-    :ensure t
+    :straight t
     :mode ("README\\.md\\'" . gfm-mode)
     :init
     (setq markdown-command "pandoc")
@@ -953,7 +1023,7 @@ Use detex output for word count
 *** Pyenv mode
 #+begin_src emacs-lisp
   (use-package pyenv-mode
-    :ensure t
+    :straight t
     :config
     (pyenv-mode)
     )
@@ -995,13 +1065,13 @@ Use detex output for word count
 Install *arduino-mode* for syntax highlighting:
 #+begin_src emacs-lisp
   (use-package arduino-mode
-    :ensure t)
+    :straight t)
 #+end_src
 
 Install *arduino-cli-mode* for compiling and uploading:
 #+begin_src emacs-lisp
   (use-package arduino-cli-mode
-    :ensure t
+    :straight t
     :hook arduino-mode
     ;; :mode "\\.ino\\'"
     :custom
@@ -1012,6 +1082,6 @@ Install *arduino-cli-mode* for compiling and uploading:
 ** YAML
 #+begin_src emacs-lisp
   (use-package yaml-mode
-    :ensure t
+    :straight t
     )
 #+end_src
