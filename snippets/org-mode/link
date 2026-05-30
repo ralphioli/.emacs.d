@@ -1,0 +1,10 @@
+# -*- mode: snippet -*-
+# name: Insert link from URL
+# key: link
+# type: command
+# --
+
+(let ((clip (string-clean-whitespace (current-kill 0))))
+    (if (string-match "^https?://[^ ]+$" clip)
+	(org-insert-link nil clip (get-title-from-url clip))
+	(message "No link at clipboard!")))

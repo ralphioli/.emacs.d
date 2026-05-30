@@ -1,7 +1,7 @@
 #+TITLE: Emacs Config
 #+AUTHOR: Ralph Dreijer
 
-* General
+* General setup
 ** Load use-package
 #+begin_src emacs-lisp
   (require 'package)
@@ -13,14 +13,6 @@
 
   (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
 #+end_src
-
-** Set custom file
-#+begin_src emacs-lisp
-(setq custom-file (concat user-emacs-directory "custom.el"))
-(when (file-exists-p custom-file)
-  (load custom-file))
-#+end_src
-
 ** Load scripts 
 Add scripts folder to load path:
 #+begin_src emacs-lisp
@@ -33,6 +25,99 @@ Source scripts:
 (require 'multi-term)
 #+end_src
 
+** Set custom file
+#+begin_src emacs-lisp
+(setq custom-file (concat user-emacs-directory "custom.el"))
+(when (file-exists-p custom-file)
+  (load custom-file))
+#+end_src
+
+* Helper functions
+** xdg-open
++ Runs =xdg-open [path]=
++ Tries to get =[path]= from current buffer if not specified
+
+#+begin_src emacs-lisp
+  (defun xdg-open (&optional path)
+    "Run xdg-open on PATH (if not specified: current buffer)"
+    (interactive)
+    (-if-let (path (or path
+  		     (pcase major-mode
+                         ('dired-mode dired-directory)
+  		       (_ (buffer-file-name)))))
+        (let (process-connection-type)
+  	(start-process "" nil "xdg-open"
+  		       (expand-file-name path)))
+      (message "Nothing to open here.")))
+#+end_src
+
+** get-title-from-url
+#+begin_src emacs-lisp
+  (defun get-title-from-url (url)
+    "Make HTTP request to get title from URL"
+    (with-current-buffer (url-retrieve-synchronously url)
+      (goto-char (point-min))
+      (re-search-forward "\n\n") ;; Skip HTTP headers
+      (let ((dom (libxml-parse-html-region (point) (point-max))))
+        (dom-text (car (dom-by-tag dom 'title)))
+        )))
+#+end_src
+
+** SSH stuff
+Get hosts from ssh config file:
+#+begin_src emacs-lisp
+  (defun parse-ssh-config-hosts (ssh-config-file)
+    "Parse the SSH config file and return a list of hosts."
+    (let ((hosts '()))
+      (when (file-readable-p ssh-config-file)
+        (with-temp-buffer
+          (insert-file-contents ssh-config-file)
+          (goto-char (point-min))
+          (while (re-search-forward "^Host[ \t]+\\(.*\\)$" nil t)
+            (let ((host-line (match-string 1)))
+              (dolist (host (split-string host-line))
+                (unless (string-match-p "[*?]" host) ;; Ignore wildcards
+                  (push host hosts)))))))
+      (delete-dups hosts)))
+#+end_src
+
+Make an ivy menu for it:
+#+begin_src emacs-lisp
+  (defun ivy-ssh-config-hosts ()
+    "Return a selected SSH host from the SSH config file using Ivy."
+    (let* ((ssh-config-file (expand-file-name "~/.ssh/config"))
+           (hosts (parse-ssh-config-hosts ssh-config-file)))
+      (if hosts
+          (ivy-read "SSH Hosts: " hosts)
+        (user-error "No hosts found in %s" ssh-config-file))))
+#+end_src
+
+*** SSH find file
+#+begin_src emacs-lisp
+  (defun find-file-ssh ()
+    "Open a file on a remote SSH host."
+    (interactive)
+    (let* ((host (ivy-ssh-config-hosts))
+           (default-directory (concat "/ssh:" host ":")))
+      (call-interactively #'counsel-find-file)))
+#+end_src
+
+*** SSH Terminal
+#+begin_src emacs-lisp
+  (defun ssh-multi-term ()
+    (interactive)
+    (let* (
+           (host (ivy-ssh-config-hosts))
+           (multi-term-program "/bin/sh")
+           (multi-term-buffer-name (format "SSH: %s" host))
+           (term-cmd (format "ssh %s\n" host))
+           (term-buffer (multi-term))
+           )
+      (term-send-raw-string term-cmd)
+      ))
+#+end_src
+
+* Theme, UI
 ** Dracula theme
 #+begin_src emacs-lisp
   (use-package dracula-theme
@@ -84,7 +169,7 @@ Copied from [[https://gitlab.com/dwt1/configuring-emacs/-/blob/main/07-the-final
 #+begin_src emacs-lisp
   (use-package counsel
     :after ivy
-    :diminish
+    :diminish counsel
     :config 
       (counsel-mode)
       (setq ivy-initial-inputs-alist nil)) ;; removes starting ^ regex in M-x
@@ -101,26 +186,6 @@ Copied from [[https://gitlab.com/dwt1/configuring-emacs/-/blob/main/07-the-final
     (setq enable-recursive-minibuffers t)
     :config
     (ivy-mode))
-#+end_src
-
-** COMMENT Golden ratio
-Auto-resize windows
-#+begin_src emacs-lisp
-  (use-package golden-ratio
-    :ensure t
-    :config
-    (setq golden-ratio-auto-scale t)
-    (golden-ratio-mode 1)
-    )
-#+end_src
-
-Fix which-key (copied from [[https://github.com/roman/golden-ratio.el/issues/82#issuecomment-806822915][here]])
-#+begin_src emacs-lisp
-  (with-eval-after-load "which-key"
-    (add-to-list 'golden-ratio-inhibit-functions
-                 (lambda ()
-                   (and which-key--buffer
-                        (window-live-p (get-buffer-window which-key--buffer))))))
 #+end_src
 
 ** Treemacs
@@ -245,6 +310,18 @@ Fix which-key (copied from [[https://github.com/roman/golden-ratio.el/issues/82#
   (treemacs-start-on-boot)
 #+end_src
 
+** highlight-indent-guides.el
+#+begin_src emacs-lisp
+  (use-package highlight-indent-guides
+    :diminish
+    :ensure t
+    :config
+    (setq highlight-indent-guides-method 'bitmap)
+    (setq highlight-indent-guides-auto-character-face-perc 35)
+    (add-hook 'prog-mode-hook 'highlight-indent-guides-mode)
+    )
+#+end_src
+
 ** COMMENT Auto-Complete
 #+begin_src emacs-lisp
   (use-package auto-complete
@@ -254,15 +331,15 @@ Fix which-key (copied from [[https://github.com/roman/golden-ratio.el/issues/82#
     )
 #+end_src
 
-** Git
-*** Magit
+* Git
+** Magit
 #+begin_src emacs-lisp
     (use-package magit
     :ensure t
   )
 #+end_src
 
-*** Diff-hl
+** Diff-hl
 #+begin_src emacs-lisp
   (use-package diff-hl
     :ensure t
@@ -276,138 +353,7 @@ Fix which-key (copied from [[https://github.com/roman/golden-ratio.el/issues/82#
     )
 #+end_src
 
-** Flyspell
-[[https://www.emacswiki.org/emacs/FlySpell#h5o-3][Copied from EmacsWiki:]]
-#+begin_src emacs-lisp
-  (defun flyspell-on-for-buffer-type ()
-    "Enable Flyspell appropriately for the major mode of the current buffer.  Uses `flyspell-prog-mode' for modes derived from `prog-mode', so only strings and comments get checked.  All other buffers get `flyspell-mode' to check all text.  If flyspell is already enabled, does nothing."
-    (interactive)
-    (if (not (symbol-value flyspell-mode)) ; if not already on
-        (progn
-          (if (derived-mode-p 'prog-mode)
-              (progn
-                (message "Flyspell on (code)")
-                (flyspell-prog-mode))
-            ;; else
-            (progn
-              (message "Flyspell on (text)")
-              (flyspell-mode 1)))
-          (flyspell-buffer)
-          )))
-
-  (defun flyspell-toggle ()
-    "Turn Flyspell on if it is off, or off if it is on.  When turning on, it uses `flyspell-on-for-buffer-type' so code-vs-text is handled appropriately."
-    (interactive)
-    (if (symbol-value flyspell-mode)
-        (progn ; flyspell is on, turn it off
-          (message "Flyspell off")
-          (flyspell-mode -1))
-                                          ; else - flyspell is off, turn it on
-      (flyspell-on-for-buffer-type)))
-#+end_src
-
-** highlight-indent-guides.el
-#+begin_src emacs-lisp
-  (use-package highlight-indent-guides
-    :diminish
-    :ensure t
-    :config
-    (setq highlight-indent-guides-method 'bitmap)
-    (setq highlight-indent-guides-auto-character-face-perc 35)
-    (add-hook 'prog-mode-hook 'highlight-indent-guides-mode)
-    )
-#+end_src
-
-** SSH stuff
-Get hosts from ssh config file:
-#+begin_src emacs-lisp
-  (defun parse-ssh-config-hosts (ssh-config-file)
-    "Parse the SSH config file and return a list of hosts."
-    (let ((hosts '()))
-      (when (file-readable-p ssh-config-file)
-        (with-temp-buffer
-          (insert-file-contents ssh-config-file)
-          (goto-char (point-min))
-          (while (re-search-forward "^Host[ \t]+\\(.*\\)$" nil t)
-            (let ((host-line (match-string 1)))
-              (dolist (host (split-string host-line))
-                (unless (string-match-p "[*?]" host) ;; Ignore wildcards
-                  (push host hosts)))))))
-      (delete-dups hosts)))
-#+end_src
-
-Make an ivy menu for it:
-#+begin_src emacs-lisp
-  (defun ivy-ssh-config-hosts ()
-    "Return a selected SSH host from the SSH config file using Ivy."
-    (let* ((ssh-config-file (expand-file-name "~/.ssh/config"))
-           (hosts (parse-ssh-config-hosts ssh-config-file)))
-      (if hosts
-          (ivy-read "SSH Hosts: " hosts)
-        (user-error "No hosts found in %s" ssh-config-file))))
-#+end_src
-
-*** SSH find file
-#+begin_src emacs-lisp
-  (defun find-file-ssh ()
-    "Open a file on a remote SSH host."
-    (interactive)
-    (let* ((host (ivy-ssh-config-hosts))
-           (default-directory (concat "/ssh:" host ":")))
-      (call-interactively #'counsel-find-file)))
-#+end_src
-
-*** SSH Terminal
-#+begin_src emacs-lisp
-  (defun ssh-multi-term ()
-    (interactive)
-    (let* (
-           (host (ivy-ssh-config-hosts))
-           (multi-term-program "/bin/sh")
-           (multi-term-buffer-name (format "SSH: %s" host))
-           (term-cmd (format "ssh %s\n" host))
-           (term-buffer (multi-term))
-           )
-      (term-send-raw-string term-cmd)
-      ))
-#+end_src
-
-** Open current buffer externally
-Largely copied from treemacs-interface.el (treemacs-visit-node-in-external-application)
-
-#+begin_src emacs-lisp
-  (defun open-this-externally ()
-    "Open current file according to its mime type in an external application.
-  Treemacs knows how to open files on linux, windows and macos."
-    (interactive)
-    ;; code adapted from ranger.el
-    (-if-let (path (buffer-file-name))
-        (pcase system-type
-          ('windows-nt
-           (declare-function w32-shell-execute "w32fns.c")
-           (w32-shell-execute "open" (replace-regexp-in-string "/" "\\" path t t)))
-          ('darwin
-           (shell-command (format "open \"%s\"" path)))
-          ('gnu/linux
-           (let (process-connection-type)
-             (start-process
-              "" nil "sh" "-c"
-              ;; XXX workaround for #633
-              (format "xdg-open %s; sleep 1"
-                      (shell-quote-argument path)))))
-          (_ (message "Don't know how to open files on %s.")))
-      (message "Nothing to open here.")))
-#+end_src
-
-** Snippets
-#+begin_src emacs-lisp
-      (use-package yasnippet
-        :ensure t
-        :config
-        (yas-global-mode 1))
-#+end_src
-
-* Keybindings
+* Keybindings, snippets
 ** Evil mode
 Setup vim-like keybindings using evil-mode:
 #+begin_src emacs-lisp
@@ -424,6 +370,8 @@ Setup vim-like keybindings using evil-mode:
     (setq evil-want-keybinding nil)
     :config
     (evil-mode 1)
+    :custom
+    (evil-lookup-func 'counsel-describe-symbol)
     )
 
   (use-package evil-collection
@@ -503,7 +451,7 @@ Install general.el and define some global keybindings.
       :global-prefix "C-SPC") ;; access leader in insert mode
 
     (my-leader-def
-      "SPC" '(counsel-imenu :wk "Imenu")
+      "SPC" '("Imenu" . counsel-imenu)
 
       ;; BUFFERS
       "b" '(:ignore t :wk "Buffers")
@@ -617,6 +565,14 @@ To see what keybindings actually do...
     )
 #+end_src
 
+** YASnippet
+#+begin_src emacs-lisp
+      (use-package yasnippet
+        :ensure t
+        :config
+        (yas-global-mode 1))
+#+end_src
+
 ** Misc tweaks
 Use escape key instead of ctrl-g:
 #+begin_src emacs-lisp
@@ -628,16 +584,14 @@ Make scratch buffer empty by default:
   (setq initial-scratch-message "")
 #+end_src
 
-* Text editing: Org Mode, LaTeX, etc.
+* Text editing
 ** Org Mode
 *** Hooks
-Automatically enable org-indent-mode, visual-line-mode
-*Org-tempo* allows for example '<s' to be expanded to a source block
+Automatically enable =org-indent-mode=, =visual-line-mode=
 #+begin_src emacs-lisp
   (add-hook 'org-mode-hook 'org-indent-mode)
   (add-hook 'org-mode-hook 'visual-line-mode)
   (add-hook 'org-mode-hook (lambda ()
-  			   ;; (require 'org-tempo)
   			   (require 'ox-beamer)
   			   (require 'ox-md)))
 #+end_src
@@ -699,39 +653,30 @@ Default export options:
    )
 #+end_src
 
-**** Startup options
+**** Other variables
 #+begin_src emacs-lisp
-  (setq
-   org-startup-folded 'overview
+  (setopt
+   org-startup-folded 'fold
    org-startup-with-inline-images t
    org-startup-with-latex-preview t
    org-pretty-entities t
+   org-hide-emphasis-markers t
+   org-image-actual-width 400
+   org-return-follows-link t
+   org-imenu-depth 6
    )
 #+end_src
 
-**** Misc. other variables
+*** Set file apps
+Set default apps for opening attachments, links, etc.
 #+begin_src emacs-lisp
-  (setq org-image-actual-width 400)
-  (setq org-return-follows-link t)
-#+end_src
-
-*** Attachments
-Open directory in system file manager
-#+begin_src emacs-lisp
-  (defun org-attach-reveal-in-file-manager ()
-    (interactive)
-    (let ((dir (org-attach-dir t)))
-      (start-process "xdg-open" nil "xdg-open" dir)))
-
-  (advice-add 'org-attach-reveal :override #'org-attach-reveal-in-file-manager)
-#+end_src
-
-Open PDF files in system viewer
-#+begin_src emacs-lisp
-(with-eval-after-load 'org
-  (setq org-file-apps
-        (cons '("\\.pdf\\'" . "xdg-open %s")
-              (assoc-delete-all "\\.pdf\\'" org-file-apps))))
+  (setopt org-file-apps
+  	'((auto-mode . emacs)
+  	  (directory . system)
+  	  ("pdf" . system)
+            ("\\.x?html?\\'" . system)
+  	  (t . system)
+  	  (system . (lambda (path _) (xdg-open path)))))
 #+end_src
 
 *** Org-download
@@ -781,7 +726,7 @@ Inserting headings (ctrl-enter) but 0.001% faster by going into insert mode:
     (define-key org-mode-map (kbd "C-S-<return>") #'better-org-insert-todo-heading))
 #+end_src
 
-**** org-insert-link
+**** COMMENT org-insert-link
 Define a function for inserting a link from a url (and adds title as description):
 #+begin_src emacs-lisp
   (defun org-insert-link-from-url (url)
@@ -836,7 +781,7 @@ Define a command that:
     "c C-a" '("Archive subtree" . org-archive-subtree)
     "c c" '("Context action" . org-ctrl-c-ctrl-c)
     "c e" '("Export" . org-export-dispatch)
-    "c l" '("Insert link" . better-org-insert-link)
+    "c l" '("Insert link" . org-insert-link)
     "c L" '("Toggle LaTeX preview" . org-latex-preview)
     "c h" '("Toggle heading" . org-toggle-heading)
     "c p" '("Toggle pretty entities" . org-toggle-pretty-entities)
@@ -973,37 +918,39 @@ Use detex output for word count
     )
 #+end_src
 
-* Web development
-** Launch HTTP Server
+** Flyspell
+[[https://www.emacswiki.org/emacs/FlySpell#h5o-3][Copied from EmacsWiki:]]
 #+begin_src emacs-lisp
-  (defun http-server () (interactive)
-         (let ((dir (read-from-minibuffer "Directory: " default-directory))
-               (port (read-from-minibuffer "Port: " "8000")))
-           (async-shell-command (concat "python3 -m http.server -d " dir " " port)
-                                (concat "*HTTP Server on port " port " [" dir "]*"))
-           (start-process "" nil "firefox" "--new-tab" (concat "http://localhost:" port))))
+  (defun flyspell-on-for-buffer-type ()
+    "Enable Flyspell appropriately for the major mode of the current buffer.  Uses `flyspell-prog-mode' for modes derived from `prog-mode', so only strings and comments get checked.  All other buffers get `flyspell-mode' to check all text.  If flyspell is already enabled, does nothing."
+    (interactive)
+    (if (not (symbol-value flyspell-mode)) ; if not already on
+        (progn
+          (if (derived-mode-p 'prog-mode)
+              (progn
+                (message "Flyspell on (code)")
+                (flyspell-prog-mode))
+            ;; else
+            (progn
+              (message "Flyspell on (text)")
+              (flyspell-mode 1)))
+          (flyspell-buffer)
+          )))
+
+  (defun flyspell-toggle ()
+    "Turn Flyspell on if it is off, or off if it is on.  When turning on, it uses `flyspell-on-for-buffer-type' so code-vs-text is handled appropriately."
+    (interactive)
+    (if (symbol-value flyspell-mode)
+        (progn ; flyspell is on, turn it off
+          (message "Flyspell off")
+          (flyspell-mode -1))
+                                          ; else - flyspell is off, turn it on
+      (flyspell-on-for-buffer-type)))
 #+end_src
 
-* Arduino
-Install *arduino-mode* for syntax highlighting:
-#+begin_src emacs-lisp
-  (use-package arduino-mode
-    :ensure t)
-#+end_src
-
-Install *arduino-cli-mode* for compiling and uploading:
-#+begin_src emacs-lisp
-  (use-package arduino-cli-mode
-    :ensure t
-    :hook arduino-mode
-    ;; :mode "\\.ino\\'"
-    :custom
-    (arduino-cli-warnings 'all)
-    (arduino-cli-verify t))
-#+end_src
-
-* Python
-** Pyenv mode
+* Programming
+** Python
+*** Pyenv mode
 #+begin_src emacs-lisp
   (use-package pyenv-mode
     :ensure t
@@ -1012,7 +959,7 @@ Install *arduino-cli-mode* for compiling and uploading:
     )
 #+end_src
 
-** Keybindings
+*** Keybindings
 #+begin_src emacs-lisp
   (my-leader-def python-mode-map
     "c" '("Python" . (keymap))
@@ -1033,7 +980,35 @@ Install *arduino-cli-mode* for compiling and uploading:
     )
 #+end_src
 
-* Misc. languages
+** Web development
+*** Launch HTTP Server
+#+begin_src emacs-lisp
+  (defun http-server () (interactive)
+         (let ((dir (read-from-minibuffer "Directory: " default-directory))
+               (port (read-from-minibuffer "Port: " "8000")))
+           (async-shell-command (concat "python3 -m http.server -d " dir " " port)
+                                (concat "*HTTP Server on port " port " [" dir "]*"))
+           (start-process "" nil "firefox" "--new-tab" (concat "http://localhost:" port))))
+#+end_src
+
+** COMMENT Arduino
+Install *arduino-mode* for syntax highlighting:
+#+begin_src emacs-lisp
+  (use-package arduino-mode
+    :ensure t)
+#+end_src
+
+Install *arduino-cli-mode* for compiling and uploading:
+#+begin_src emacs-lisp
+  (use-package arduino-cli-mode
+    :ensure t
+    :hook arduino-mode
+    ;; :mode "\\.ino\\'"
+    :custom
+    (arduino-cli-warnings 'all)
+    (arduino-cli-verify t))
+#+end_src
+
 ** YAML
 #+begin_src emacs-lisp
   (use-package yaml-mode
