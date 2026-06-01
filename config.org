@@ -3,20 +3,22 @@
 #+PROPERTY: header-args:emacs-lisp :tangle ./init.el :mkdirp yes
 
 * General setup
-** Startup performance
-[[https://github.com/daviwil/emacs-from-scratch/blob/d23348b4a52dde97f4f7cbcd66a519b5fd0a143c/Emacs.org#startup-performance][emacs-from-scratch/Emacs.org at d23348b4a52dde97f4f7cbcd66a519b5fd0a143c · daviwil/emacs-from-scratch · GitHub]]
+** Performance
+*** Garbage collection tweaks
+#+begin_src emacs-lisp :tangle ./early-init.el
+  (setq gc-cons-threshold most-positive-fixnum
+        gc-cons-percentage 0.5)
+  (add-hook 'emacs-startup-hook
+  	  (lambda () (setq gc-cons-threshold 800000)))
+#+end_src
+
+*** Report startup time
 #+begin_src emacs-lisp
-  ;; The default is 800 kilobytes.  Measured in bytes.
-  ;; (setq gc-cons-threshold (* 50 1000 1000))
-
-  (defun efs/display-startup-time ()
-    (message "Emacs loaded in %s with %d garbage collections."
-             (format "%.2f seconds"
-                     (float-time
-                       (time-subtract after-init-time before-init-time)))
-             gcs-done))
-
-  (add-hook 'emacs-startup-hook #'efs/display-startup-time)
+  (add-hook 'emacs-startup-hook
+  	  (lambda ()
+  	    (message "Emacs loaded in %.2f seconds"
+  		     (float-time
+  		      (time-subtract after-init-time before-init-time)))))
 #+end_src
 ** Package management
 *** straight.el
@@ -45,23 +47,10 @@ Prevent =package.el= from loading:
 #+end_src
 *** use-package
 #+begin_src emacs-lisp
-  (require 'use-package)
   (straight-use-package 'use-package)
   (setq use-package-compute-statistics t)
 #+end_src
-** COMMENT Load use-package
-#+begin_src emacs-lisp
-  (require 'package)
-  (require 'use-package)
-  (require 'use-package-ensure)
-
-  (setq use-package-always-ensure t)
-  (setq use-package-compute-statistics t)
-  (package-initialize)
-
-  (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
-#+end_src
-** Load scripts 
+** COMMENT Load scripts 
 Add scripts folder to load path:
 #+begin_src emacs-lisp
   (add-to-list 'load-path "~/.emacs.d/scripts/")
@@ -170,73 +159,52 @@ Make an ivy menu for it:
 #+begin_src emacs-lisp
   (use-package dracula-theme
     :straight t
-   :config
-   (load-theme 'dracula t)
-  )
-#+end_src
-
-** Modeline
-*** Diminished modes
-Don't show all minor modes in the mode line
-#+begin_src emacs-lisp
-  (use-package diminish
-    :straight t)
-#+end_src
-
-*** COMMENT Show word count
-#+begin_src emacs-lisp
-  (use-package wc-mode
-    :straight t
+    :config
+    (load-theme 'dracula t)
     )
 #+end_src
 
-** Misc. UI tweaks
+** Diminish
+Don't show all minor modes in the mode line:
 #+begin_src emacs-lisp
-  (scroll-bar-mode -1) ;; Hide scrollbar
-  (tool-bar-mode -1) ;; Hide toolbar
-  (menu-bar-mode -1) ;; Hide menubar
-
-  (setq inhibit-startup-screen t) ;; Disable startup screen
-  (add-to-list 'default-frame-alist '(fullscreen . maximized)) ;; Maximize frames by default
-
-  (setopt use-short-answers t) ;; use y/n in prompts instead of typing out yes/no
-#+end_src
-
-Enable line numbering:
-#+begin_src emacs-lisp
-  (setq display-line-numbers-type 'relative)
-  (add-hook 'prog-mode-hook #'display-line-numbers-mode)
-  (add-hook 'text-mode-hook #'display-line-numbers-mode)
+  (use-package diminish :straight t)
 #+end_src
 
 ** Ivy, Counsel
-Copied from [[https://gitlab.com/dwt1/configuring-emacs/-/blob/main/07-the-final-touches/config.org][DT's Emacs config]]:
+*** Ivy
+[[https://github.com/abo-abo/swiper][GitHub - abo-abo/swiper: Ivy - a generic completion frontend for Emacs, Swiper - isearch with an overview, and more. Oh, man! · GitHub]]
+#+begin_src emacs-lisp
+  (use-package ivy
+    :straight t
+    :diminish
+    :custom
+    (ivy-count-format "(%d/%d) ")
+    (enable-recursive-minibuffers t)
+    :config
+    (ivy-mode))
+#+end_src
 
-+ Ivy, a generic completion mechanism for Emacs.
-+ Counsel, a collection of Ivy-enhanced versions of common Emacs commands.
-
+*** Counsel
 #+begin_src emacs-lisp
   (use-package counsel
     :straight t
     :after ivy
-    :diminish counsel
-    :config 
-      (counsel-mode)
-      (setq ivy-initial-inputs-alist nil)) ;; removes starting ^ regex in M-x
-
-  (use-package ivy
-    :straight t
-    :bind
-    ;; ivy-resume resumes the last Ivy-based completion.
-    (("C-c C-r" . ivy-resume)
-     ("C-x B" . ivy-switch-buffer-other-window))
     :diminish
     :custom
-    (setq ivy-use-virtual-buffers t)
-    (setq ivy-count-format "(%d/%d) ")
-    (setq enable-recursive-minibuffers t)
+        (ivy-initial-inputs-alist nil)
+    :config 
+      (counsel-mode))
+#+end_src
+
+*** Ivy-rich
+[[https://github.com/Yevgnen/ivy-rich][GitHub - Yevgnen/ivy-rich: More friendly interface for ivy. · GitHub]]
+#+begin_src emacs-lisp
+  (use-package ivy-rich
+    :straight t
+    :after (ivy counsel)
     :config
-    (ivy-mode))
+    (ivy-rich-mode 1)
+    )
 #+end_src
 
 ** Treemacs
@@ -361,103 +329,77 @@ Copied from [[https://gitlab.com/dwt1/configuring-emacs/-/blob/main/07-the-final
   (treemacs-start-on-boot)
 #+end_src
 
-** highlight-indent-guides.el
+** Misc. UI tweaks
 #+begin_src emacs-lisp
-  (use-package highlight-indent-guides
-    :diminish
-    :straight t
-    :config
-    (setq highlight-indent-guides-method 'bitmap)
-    (setq highlight-indent-guides-auto-character-face-perc 35)
-    (add-hook 'prog-mode-hook 'highlight-indent-guides-mode)
-    )
+  (scroll-bar-mode -1) ;; Hide scrollbar
+  (tool-bar-mode -1) ;; Hide toolbar
+  (menu-bar-mode -1) ;; Hide menubar
+
+  (setq inhibit-startup-screen t) ;; Disable startup screen
+  (add-to-list 'default-frame-alist '(fullscreen . maximized)) ;; Maximize frames by default
+
+  (setopt use-short-answers t) ;; use y/n in prompts instead of typing out yes/no
 #+end_src
 
-** COMMENT Auto-Complete
+Enable line numbering:
 #+begin_src emacs-lisp
-  (use-package auto-complete
-    :straight t
-    :config 
-    (ac-config-default)
-    )
+  ;; (setq display-line-numbers-type 'relative)
+  ;; (add-hook 'prog-mode-hook #'display-line-numbers-mode)
 #+end_src
 
-* Git
-** Magit
+Make scratch buffer empty by default:
 #+begin_src emacs-lisp
-    (use-package magit
-    :straight t
-  )
+  (setq initial-scratch-message "")
 #+end_src
 
-** Diff-hl
-#+begin_src emacs-lisp
-  (use-package diff-hl
-    :straight t
-    :after evil
-    :config
-    (add-hook 'magit-pre-refresh-hook 'diff-hl-magit-pre-refresh)
-    (add-hook 'magit-post-refresh-hook 'diff-hl-magit-post-refresh)
-    (evil-define-key 'motion diff-hl-mode-map (kbd "[ g") #'diff-hl-previous-hunk)
-    (evil-define-key 'motion diff-hl-mode-map (kbd "] g") #'diff-hl-next-hunk)
-    (global-diff-hl-mode)
-    )
-#+end_src
-
-* Keybindings, snippets
-** Evil mode
-Setup vim-like keybindings using evil-mode:
+* Keybindings, snippets, completion
+** Keybindings
+*** Evil
 #+begin_src emacs-lisp
   (use-package evil
     :straight t
     :init
-    (setq evil-undo-system 'undo-redo)
-    (setq evil-want-fine-undo t)
-    (setq evil-want-Y-yank-to-eol t)
-    (setq evil-want-C-d-scroll t)
-    (setq evil-want-C-u-scroll t)
     ;; Needed for evil-collection (see below):
     (setq evil-want-integration t) ;; This is optional since it's already set to t by default.
     (setq evil-want-keybinding nil)
-    :config
-    (evil-mode 1)
     :custom
+    (evil-undo-system 'undo-redo)
+    (evil-want-fine-undo t)
     (evil-lookup-func 'counsel-describe-symbol)
-    )
+    (evil-respect-visual-line-mode t)
+    :config
+    (setopt evil-want-Y-yank-to-eol t)
+    (evil-mode 1))
+#+end_src
 
+*** Evil-collection
+#+begin_src emacs-lisp
   (use-package evil-collection
+    :straight t
     :diminish evil-collection-unimpaired-mode
     :after evil
-    :straight t
     :config
     (evil-collection-init)
     )
 #+end_src
 
-#+RESULTS:
-: #s(hash-table data (:use-package (27163 8739 373485 243000) :init (27163 8739 373477 180000) :config (27163 8739 373465 513000) :config-secs (0 0 24908 129000) :init-secs (0 0 29431 653000) :use-package-secs (0 0 40152 518000)))
-
-Disable evil's RET keybinding (conflicts with org-return, and is useless anyway)
-#+begin_src emacs-lisp
-  (with-eval-after-load 'evil-maps
-    (define-key evil-motion-state-map (kbd "RET") nil))
-#+end_src
-
-Add /vim-commentary/-like motions:
+*** Evil-commentary
 #+begin_src emacs-lisp
   (use-package evil-commentary
-    :diminish
     :straight t
+    :diminish
+    :after evil
     :config
     (evil-commentary-mode)
     )
 #+end_src
 
-Use *evil-goggles* to give visual feedback:
+*** Evil-goggles
+Gives visual feedback
 #+begin_src emacs-lisp
   (use-package evil-goggles
-    :diminish
     :straight t
+    :diminish
     :config
     (evil-goggles-mode)
 
@@ -479,7 +421,8 @@ Use *evil-goggles* to give visual feedback:
     )
 #+end_src
 
-*evil-numbers*: c-a and c-x like in vim:
+*** Evil-numbers
+=C-a= and =C-x= like in vim
 #+begin_src emacs-lisp
   (use-package evil-numbers
     :straight t
@@ -491,7 +434,7 @@ Use *evil-goggles* to give visual feedback:
   )
 #+end_src
 
-** General.el
+*** General.el
 Install general.el and define some global keybindings.
 #+begin_src emacs-lisp
   (use-package general
@@ -596,11 +539,11 @@ Install general.el and define some global keybindings.
       ))
 #+end_src
 
-** Frame keybindings
-+ *Ctrl+Shift+N*: New frame
-+ *Ctrl+Shift+W*: Close frame
-+ *Ctrl+Tab*: Next frame
-+ *Ctrl+Shift+Tab*: Previous frame
+*** Misc. keybindings
++ =Ctrl+Shift+N=: New frame
++ =Ctrl+Shift+W=: Close frame
++ =Ctrl+Tab=: Next frame
++ =Ctrl+Shift+Tab=: Previous frame
 
 #+begin_src emacs-lisp
   (keymap-global-set "C-S-n" #'make-frame)
@@ -609,17 +552,24 @@ Install general.el and define some global keybindings.
   (keymap-global-set "C-<iso-lefttab>" (lambda () (interactive) (other-frame -1)))
 #+end_src
 
+Use =ESC= instead of =Ctrl-G=:
+#+begin_src emacs-lisp
+(global-set-key [escape] 'keyboard-escape-quit)
+#+end_src
+
 ** Which key
-To see what keybindings actually do...
 #+begin_src emacs-lisp
   (use-package which-key
-    :straight t
     :diminish
+    :custom
+    (which-key-idle-delay 1)
+    (which-key-idle-secondary-delay 0)
+    (which-key-max-description-length 80)
+    (which-key-show-early-on-C-h t)
+    (which-key-show-docstrings t)
     :config
-    (setq which-key-idle-delay 0)
     (which-key-mode)
-    (which-key-setup-side-window-bottom)
-    )
+    (which-key-setup-side-window-bottom))
 #+end_src
 
 ** YASnippet
@@ -630,130 +580,182 @@ To see what keybindings actually do...
         (yas-global-mode 1))
 #+end_src
 
-** Misc tweaks
-Use escape key instead of ctrl-g:
+** COMMENT Auto-Complete
 #+begin_src emacs-lisp
-(global-set-key [escape] 'keyboard-escape-quit)
+  (use-package auto-complete
+    :straight t
+    :config 
+    (ac-config-default)
+    )
 #+end_src
 
-Make scratch buffer empty by default:
+** Flyspell
+[[https://www.emacswiki.org/emacs/FlySpell#h5o-3][Copied from EmacsWiki:]]
 #+begin_src emacs-lisp
-  (setq initial-scratch-message "")
+  (defun flyspell-on-for-buffer-type ()
+    "Enable Flyspell appropriately for the major mode of the current buffer.  Uses `flyspell-prog-mode' for modes derived from `prog-mode', so only strings and comments get checked.  All other buffers get `flyspell-mode' to check all text.  If flyspell is already enabled, does nothing."
+    (interactive)
+    (if (not (symbol-value flyspell-mode)) ; if not already on
+        (progn
+          (if (derived-mode-p 'prog-mode)
+              (progn
+                (message "Flyspell on (code)")
+                (flyspell-prog-mode))
+            ;; else
+            (progn
+              (message "Flyspell on (text)")
+              (flyspell-mode 1)))
+          (flyspell-buffer)
+          )))
+
+  (defun flyspell-toggle ()
+    "Turn Flyspell on if it is off, or off if it is on.  When turning on, it uses `flyspell-on-for-buffer-type' so code-vs-text is handled appropriately."
+    (interactive)
+    (if (symbol-value flyspell-mode)
+        (progn ; flyspell is on, turn it off
+          (message "Flyspell off")
+          (flyspell-mode -1))
+                                          ; else - flyspell is off, turn it on
+      (flyspell-on-for-buffer-type)))
 #+end_src
 
-* Text editing, Org
+* Git
+** Magit
+#+begin_src emacs-lisp
+    (use-package magit
+    :straight t
+    :commands magit-status)
+#+end_src
+
+** Diff-hl
+#+begin_src emacs-lisp
+  (use-package diff-hl
+    :straight t
+    :after evil
+    :config
+    (add-hook 'magit-pre-refresh-hook 'diff-hl-magit-pre-refresh)
+    (add-hook 'magit-post-refresh-hook 'diff-hl-magit-post-refresh)
+    (evil-define-key 'motion diff-hl-mode-map (kbd "[ g") #'diff-hl-previous-hunk)
+    (evil-define-key 'motion diff-hl-mode-map (kbd "] g") #'diff-hl-next-hunk)
+    (global-diff-hl-mode)
+    )
+#+end_src
+
+* Text editing: Org, LaTeX, etc.
+** General
+*** Visual line mode
+#+begin_src emacs-lisp
+  (add-hook 'text-mode-hook
+  	    (lambda ()
+  	      (visual-line-mode)
+  	      (let ((display-line-numbers-type 'visual))
+  		(display-line-numbers-mode))))
+#+end_src
+
+*** PDF Tools
+To view PDFs inside Emacs
+#+begin_src emacs-lisp
+  (use-package pdf-tools
+    :straight t
+    :mode ("\\.[pP][dD][fF]\\'" . pdf-view-mode)
+    :config
+    (pdf-tools-install))
+#+end_src
+
+*** COMMENT Show word count
+#+begin_src emacs-lisp
+  (use-package wc-mode
+    :straight t
+    )
+#+end_src
+
 ** Org Mode
-*** Hooks
-Automatically enable =org-indent-mode=, =visual-line-mode=
 #+begin_src emacs-lisp
-  (add-hook 'org-mode-hook 'org-indent-mode)
-  (add-hook 'org-mode-hook 'visual-line-mode)
-  (add-hook 'org-mode-hook (lambda ()
-  			   (require 'ox-beamer)
-  			   (require 'ox-md)))
-#+end_src
+  (use-package org
+    :defer t
+    :init
+    ;; indent text according to outline structure.
+    (add-hook 'org-mode-hook 'org-indent-mode)
 
-**** Auto-tangle config
-#+begin_src emacs-lisp
-;; Automatically tangle our Emacs.org config file when we save it
-(defun efs/org-babel-tangle-config ()
-  (when (string-equal (file-name-directory (buffer-file-name))
-                      (expand-file-name user-emacs-directory))
-    ;; Dynamic scoping to the rescue
-    (let ((org-confirm-babel-evaluate nil))
-      (org-babel-tangle))))
+    ;; Auto-tangle
+    (add-hook 'org-mode-hook (lambda ()
+  			     (add-hook 'after-save-hook
+  				       'org-babel-tangle nil t)))
 
-(add-hook 'org-mode-hook (lambda () (add-hook 'after-save-hook #'efs/org-babel-tangle-config)))
-#+end_src
+    :config
+    (setopt org-startup-folded 'fold
+  	  org-startup-with-inline-images t
+  	  org-startup-with-latex-preview t
+  	  org-pretty-entities t
+  	  org-hide-emphasis-markers t
+  	  org-image-actual-width 400
+  	  org-return-follows-link t
+  	  org-imenu-depth 3
+  	  org-highlight-latex-and-related '(latex script entities)
+  	  org-format-latex-options (plist-put org-format-latex-options :scale 1.5))
 
-*** Variables
-**** LaTeX syntax highlighting
-Setup $\LaTeX$ syntax highlighting
-#+begin_src emacs-lisp
-  (setq org-highlight-latex-and-related '(latex script entities))
-  (setq org-format-latex-options (plist-put org-format-latex-options :scale 1.5))
-#+end_src
+    ;; Default apps for opening attachments, links, etc.
+    (setopt org-file-apps
+  	  '((auto-mode . emacs)
+  	    (directory . system)
+  	    ("pdf" . system)
+              ("\\.x?html?\\'" . system)
+  	    (t . system)
+  	    (system . (lambda (path _) (xdg-open path)))))
 
-**** LaTeX export settings
-Define LaTeX classes:
-#+begin_src emacs-lisp
-  (setq org-latex-classes 
-        '(("article" "\\documentclass[11pt,a4paper]{article} \\usepackage[margin=2.5cm]{geometry}"
-  	 ("\\section{%s}" . "\\section*{%s}")
-  	 ("\\subsection{%s}" . "\\subsection*{%s}")
-  	 ("\\subsubsection{%s}" . "\\subsubsection*{%s}")
-  	 ("\\paragraph{%s}" . "\\paragraph*{%s}")
-  	 ("\\subparagraph{%s}" . "\\subparagraph*{%s}"))
-  	("notes" "\\documentclass[11pt,a4paper,twocolumn]{article} \\usepackage[margin=1.5cm]{geometry}"
-  	 ("\\section{%s}" . "\\section*{%s}")
-  	 ("\\subsection{%s}" . "\\subsection*{%s}")
-  	 ("\\subsubsection{%s}" . "\\subsubsection*{%s}")
-  	 ("\\paragraph{%s}" . "\\paragraph*{%s}")
-  	 ("\\subparagraph{%s}" . "\\subparagraph*{%s}"))
-  	("report" "\\documentclass[11pt,a4paper]{report} \\usepackage[margin=2.5cm]{geometry}"
-  	 ;; ("\\part{%s}" . "\\part*{%s}")
-  	 ("\\chapter{%s}" . "\\chapter*{%s}")
-  	 ("\\section{%s}" . "\\section*{%s}")
-  	 ("\\subsection{%s}" . "\\subsection*{%s}")
-  	 ("\\subsubsection{%s}" . "\\subsubsection*{%s}")
-  	 ("\\paragraph{%s}" . "\\paragraph*{%s}")
-  	 ("\\subparagraph{%s}" . "\\subparagraph*{%s}"))
-  	("book" "\\documentclass[11pt,a4paper]{book}"
-  	 ("\\part{%s}" . "\\part*{%s}")
-  	 ("\\chapter{%s}" . "\\chapter*{%s}")
-  	 ("\\section{%s}" . "\\section*{%s}")
-  	 ("\\subsection{%s}" . "\\subsection*{%s}")
-  	 ("\\subsubsection{%s}" . "\\subsubsection*{%s}"))))
-#+end_src
+    ;; Fix <return> commands
+    (advice-add 'org-insert-heading :before (lambda (&rest _) (evil-insert 1)))
+    (evil-define-key 'normal org-mode-map (kbd "<return>") 'org-return)
 
-Set default class to notes:
-#+begin_src emacs-lisp
-  (setq org-latex-default-class "notes")
-#+end_src
+    ;;; SETUP EXPORTS
+    ;; Allow exporting to beamer or markdown
+    (require 'ox-beamer)
+    (require 'ox-md)
 
-Default export options:
-#+begin_src emacs-lisp
-  (setq
-   org-export-headline-levels 6
-   org-export-with-priority nil
-   org-export-with-statistics-cookies nil
-   org-export-with-tags nil
-   org-export-with-toc nil
-   org-export-with-todo-keywords nil
-   )
-#+end_src
+    ;; Setup LaTeX classes
+    (setopt org-latex-classes 
+  	  '(("article" "\\documentclass[11pt,a4paper]{article} \\usepackage[margin=2.5cm]{geometry}"
+  	     ("\\section{%s}" . "\\section*{%s}")
+  	     ("\\subsection{%s}" . "\\subsection*{%s}")
+  	     ("\\subsubsection{%s}" . "\\subsubsection*{%s}")
+  	     ("\\paragraph{%s}" . "\\paragraph*{%s}")
+  	     ("\\subparagraph{%s}" . "\\subparagraph*{%s}"))
+  	    ("notes" "\\documentclass[11pt,a4paper,twocolumn]{article} \\usepackage[margin=1.5cm]{geometry}"
+  	     ("\\section{%s}" . "\\section*{%s}")
+  	     ("\\subsection{%s}" . "\\subsection*{%s}")
+  	     ("\\subsubsection{%s}" . "\\subsubsection*{%s}")
+  	     ("\\paragraph{%s}" . "\\paragraph*{%s}")
+  	     ("\\subparagraph{%s}" . "\\subparagraph*{%s}"))
+  	    ("report" "\\documentclass[11pt,a4paper]{report} \\usepackage[margin=2.5cm]{geometry}"
+  	     ;; ("\\part{%s}" . "\\part*{%s}")
+  	     ("\\chapter{%s}" . "\\chapter*{%s}")
+  	     ("\\section{%s}" . "\\section*{%s}")
+  	     ("\\subsection{%s}" . "\\subsection*{%s}")
+  	     ("\\subsubsection{%s}" . "\\subsubsection*{%s}")
+  	     ("\\paragraph{%s}" . "\\paragraph*{%s}")
+  	     ("\\subparagraph{%s}" . "\\subparagraph*{%s}"))
+  	    ("book" "\\documentclass[11pt,a4paper]{book}"
+  	     ("\\part{%s}" . "\\part*{%s}")
+  	     ("\\chapter{%s}" . "\\chapter*{%s}")
+  	     ("\\section{%s}" . "\\section*{%s}")
+  	     ("\\subsection{%s}" . "\\subsection*{%s}")
+  	     ("\\subsubsection{%s}" . "\\subsubsection*{%s}"))))
 
-**** Other variables
-#+begin_src emacs-lisp
-  (setopt
-   org-startup-folded 'fold
-   org-startup-with-inline-images t
-   org-startup-with-latex-preview t
-   org-pretty-entities t
-   org-hide-emphasis-markers t
-   org-image-actual-width 400
-   org-return-follows-link t
-   org-imenu-depth 6
-   )
-#+end_src
-
-*** Set file apps
-Set default apps for opening attachments, links, etc.
-#+begin_src emacs-lisp
-  (setopt org-file-apps
-  	'((auto-mode . emacs)
-  	  (directory . system)
-  	  ("pdf" . system)
-            ("\\.x?html?\\'" . system)
-  	  (t . system)
-  	  (system . (lambda (path _) (xdg-open path)))))
+    ;; Default export settings
+    (setopt org-latex-default-class "notes"
+  	  org-export-headline-levels 6
+  	  org-export-with-priority nil
+  	  org-export-with-statistics-cookies nil
+  	  org-export-with-tags nil
+  	  org-export-with-toc nil
+  	  org-export-with-todo-keywords nil))
 #+end_src
 
 *** Org-download
 For inserting images
-
 #+begin_src emacs-lisp
   (use-package org-download
+    :straight t
     :after org
     :custom
     (org-download-method 'directory)
@@ -765,74 +767,14 @@ For inserting images
   (add-hook 'dired-mode-hook 'org-download-enable)
 #+end_src
 
-*** (Slightly) better versions of org commands
-**** org-indent-block
-...but the cursor doesn't have to be at the head of a block
-#+begin_src emacs-lisp
-  (defun better-org-indent-block ()
-    (interactive)
-    (org-babel-goto-src-block-head)
-    (org-indent-block)
-    )
-#+end_src
-
-**** org-insert-heading
-Inserting headings (ctrl-enter) but 0.001% faster by going into insert mode:
-#+begin_src emacs-lisp
-  (defun better-org-insert-heading ()
-    (interactive)
-    (org-insert-heading-respect-content)
-    (evil-insert 1)
-    )
-
-  (defun better-org-insert-todo-heading ()
-    (interactive)
-    (org-insert-todo-heading-respect-content)
-    (evil-insert 1)
-    )
-
-  (with-eval-after-load "org"
-    (define-key org-mode-map (kbd "C-<return>") #'better-org-insert-heading)
-    (define-key org-mode-map (kbd "C-S-<return>") #'better-org-insert-todo-heading))
-#+end_src
-
-**** COMMENT org-insert-link
-Define a function for inserting a link from a url (and adds title as description):
-#+begin_src emacs-lisp
-  (defun org-insert-link-from-url (url)
-    (org-insert-link nil url
-                     (with-current-buffer (url-retrieve-synchronously url)
-                       (goto-char (point-min))
-                       (re-search-forward "\n\n") ;; Skip HTTP headers
-                       (let ((dom (libxml-parse-html-region (point) (point-max))))
-                         (dom-text (car (dom-by-tag dom 'title)))
-                         ))))
-#+end_src
-
-Define a command that:
-1) Currently at link? Call org-insert-link interactively
-2) Clipboard contains url? Call org-insert-link-from-url
-3) Else call org-insert-link interactively
-#+begin_src emacs-lisp
-  (defun better-org-insert-link ()
-    (interactive)
-    (if (org-in-regexp org-link-bracket-re 1)
-        (call-interactively #'org-insert-link)
-      (let ((clip (string-clean-whitespace (current-kill 0))))
-        (if (string-match "^https?://[^ ]+$" clip)
-            (org-insert-link-from-url clip)
-          (call-interactively #'org-insert-link)
-          ))))
-#+end_src
-
-*** Keybindings
+*** General keybindings
 #+begin_src emacs-lisp
   (my-leader-def org-mode-map
     "c" '("Org mode" . (keymap))
 
     ;; Code blocks
     "c b" '("Code block" . (keymap))
-    "c b i" '("Indent block" . better-org-indent-block)
+    "c b i" '("Indent block" . org-indent-block)
     "c b r" '("Hide/show result" . org-babel-hide-result-toggle)
     "c b R" '("Remove result" . org-babel-remove-result)
     "c b C-r" '("Remove ALL results" .
@@ -859,26 +801,17 @@ Define a command that:
     )
 #+end_src
 
-** PDF Tools
-To view PDFs inside Emacs
-#+begin_src emacs-lisp
-  (use-package pdf-tools
-    :config
-    (pdf-tools-install)
-    )
-#+end_src
-
 ** LaTeX
 Install AucTeX and do some [[https://www.emacswiki.org/emacs/AUCTeX#h5o-2][customary customization]]:
 #+begin_src emacs-lisp
-  (use-package auctex)
+  (use-package auctex :straight t)
 
   (setq TeX-auto-save t)
   (setq TeX-parse-self t)
   (setq-default TeX-master nil)
 
-  (add-hook 'LaTeX-mode-hook 'visual-line-mode)
-  (add-hook 'LaTeX-mode-hook 'auto-fill-mode)
+  ;; (add-hook 'LaTeX-mode-hook 'visual-line-mode)
+  ;; (add-hook 'LaTeX-mode-hook 'auto-fill-mode)
   (add-hook 'LaTeX-mode-hook 'flyspell-mode)
   (add-hook 'LaTeX-mode-hook 'LaTeX-math-mode)
 
@@ -984,43 +917,33 @@ Use detex output for word count
     :mode ("README\\.md\\'" . gfm-mode)
     :init
     (setq markdown-command "pandoc")
-    (setq markdown-enable-math t)
-    )
-#+end_src
-
-** Flyspell
-[[https://www.emacswiki.org/emacs/FlySpell#h5o-3][Copied from EmacsWiki:]]
-#+begin_src emacs-lisp
-  (defun flyspell-on-for-buffer-type ()
-    "Enable Flyspell appropriately for the major mode of the current buffer.  Uses `flyspell-prog-mode' for modes derived from `prog-mode', so only strings and comments get checked.  All other buffers get `flyspell-mode' to check all text.  If flyspell is already enabled, does nothing."
-    (interactive)
-    (if (not (symbol-value flyspell-mode)) ; if not already on
-        (progn
-          (if (derived-mode-p 'prog-mode)
-              (progn
-                (message "Flyspell on (code)")
-                (flyspell-prog-mode))
-            ;; else
-            (progn
-              (message "Flyspell on (text)")
-              (flyspell-mode 1)))
-          (flyspell-buffer)
-          )))
-
-  (defun flyspell-toggle ()
-    "Turn Flyspell on if it is off, or off if it is on.  When turning on, it uses `flyspell-on-for-buffer-type' so code-vs-text is handled appropriately."
-    (interactive)
-    (if (symbol-value flyspell-mode)
-        (progn ; flyspell is on, turn it off
-          (message "Flyspell off")
-          (flyspell-mode -1))
-                                          ; else - flyspell is off, turn it on
-      (flyspell-on-for-buffer-type)))
+    (setq markdown-enable-math t))
 #+end_src
 
 * Programming
+** General
+*** Line numbering
+#+begin_src emacs-lisp
+  (add-hook 'prog-mode-hook
+  	  (lambda ()
+  	    (let ((display-line-numbers-type 'relative))
+  	      (display-line-numbers-mode))))
+#+end_src
+*** COMMENT highlight-indent-guides.el
+#+begin_src emacs-lisp
+  (use-package highlight-indent-guides
+    :diminish
+    :straight t
+    :custom
+    :config
+    (setq highlight-indent-guides-method 'bitmap)
+    (setq highlight-indent-guides-auto-character-face-perc 35)
+    (add-hook 'prog-mode-hook 'highlight-indent-guides-mode)
+    )
+#+end_src
+
 ** Python
-*** Pyenv mode
+*** COMMENT Pyenv mode
 #+begin_src emacs-lisp
   (use-package pyenv-mode
     :straight t
@@ -1082,6 +1005,5 @@ Install *arduino-cli-mode* for compiling and uploading:
 ** YAML
 #+begin_src emacs-lisp
   (use-package yaml-mode
-    :straight t
-    )
+    :straight t)
 #+end_src

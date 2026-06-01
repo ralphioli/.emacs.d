@@ -1,14 +1,8 @@
-;; The default is 800 kilobytes.  Measured in bytes.
-;; (setq gc-cons-threshold (* 50 1000 1000))
-
-(defun efs/display-startup-time ()
-  (message "Emacs loaded in %s with %d garbage collections."
-           (format "%.2f seconds"
-                   (float-time
-                     (time-subtract after-init-time before-init-time)))
-           gcs-done))
-
-(add-hook 'emacs-startup-hook #'efs/display-startup-time)
+(add-hook 'emacs-startup-hook
+	  (lambda ()
+	    (message "Emacs loaded in %.2f seconds"
+		     (float-time
+		      (time-subtract after-init-time before-init-time)))))
 
 (defvar bootstrap-version)
 (let ((bootstrap-file
@@ -26,14 +20,8 @@
       (eval-print-last-sexp)))
   (load bootstrap-file nil 'nomessage))
 
-(require 'use-package)
 (straight-use-package 'use-package)
 (setq use-package-compute-statistics t)
-
-(add-to-list 'load-path "~/.emacs.d/scripts/")
-
-(require 'buffer-move)
-(require 'multi-term)
 
 (setq custom-file (concat user-emacs-directory "custom.el"))
 (when (file-exists-p custom-file)
@@ -103,47 +91,36 @@
 
 (use-package dracula-theme
   :straight t
- :config
- (load-theme 'dracula t)
-)
+  :config
+  (load-theme 'dracula t)
+  )
 
-(use-package diminish
-  :straight t)
+(use-package diminish :straight t)
 
-(scroll-bar-mode -1) ;; Hide scrollbar
-(tool-bar-mode -1) ;; Hide toolbar
-(menu-bar-mode -1) ;; Hide menubar
-
-(setq inhibit-startup-screen t) ;; Disable startup screen
-(add-to-list 'default-frame-alist '(fullscreen . maximized)) ;; Maximize frames by default
-
-(setopt use-short-answers t) ;; use y/n in prompts instead of typing out yes/no
-
-(setq display-line-numbers-type 'relative)
-(add-hook 'prog-mode-hook #'display-line-numbers-mode)
-(add-hook 'text-mode-hook #'display-line-numbers-mode)
+(use-package ivy
+  :straight t
+  :diminish
+  :custom
+  (ivy-count-format "(%d/%d) ")
+  (enable-recursive-minibuffers t)
+  :config
+  (ivy-mode))
 
 (use-package counsel
   :straight t
   :after ivy
-  :diminish counsel
-  :config 
-    (counsel-mode)
-    (setq ivy-initial-inputs-alist nil)) ;; removes starting ^ regex in M-x
-
-(use-package ivy
-  :straight t
-  :bind
-  ;; ivy-resume resumes the last Ivy-based completion.
-  (("C-c C-r" . ivy-resume)
-   ("C-x B" . ivy-switch-buffer-other-window))
   :diminish
   :custom
-  (setq ivy-use-virtual-buffers t)
-  (setq ivy-count-format "(%d/%d) ")
-  (setq enable-recursive-minibuffers t)
+      (ivy-initial-inputs-alist nil)
+  :config 
+    (counsel-mode))
+
+(use-package ivy-rich
+  :straight t
+  :after (ivy counsel)
   :config
-  (ivy-mode))
+  (ivy-rich-mode 1)
+  )
 
 (use-package treemacs
   :straight t
@@ -264,68 +241,54 @@
 
 (treemacs-start-on-boot)
 
-(use-package highlight-indent-guides
-  :diminish
-  :straight t
-  :config
-  (setq highlight-indent-guides-method 'bitmap)
-  (setq highlight-indent-guides-auto-character-face-perc 35)
-  (add-hook 'prog-mode-hook 'highlight-indent-guides-mode)
-  )
+(scroll-bar-mode -1) ;; Hide scrollbar
+(tool-bar-mode -1) ;; Hide toolbar
+(menu-bar-mode -1) ;; Hide menubar
 
-(use-package magit
-  :straight t
-)
+(setq inhibit-startup-screen t) ;; Disable startup screen
+(add-to-list 'default-frame-alist '(fullscreen . maximized)) ;; Maximize frames by default
 
-(use-package diff-hl
-  :straight t
-  :after evil
-  :config
-  (add-hook 'magit-pre-refresh-hook 'diff-hl-magit-pre-refresh)
-  (add-hook 'magit-post-refresh-hook 'diff-hl-magit-post-refresh)
-  (evil-define-key 'motion diff-hl-mode-map (kbd "[ g") #'diff-hl-previous-hunk)
-  (evil-define-key 'motion diff-hl-mode-map (kbd "] g") #'diff-hl-next-hunk)
-  (global-diff-hl-mode)
-  )
+(setopt use-short-answers t) ;; use y/n in prompts instead of typing out yes/no
+
+;; (setq display-line-numbers-type 'relative)
+;; (add-hook 'prog-mode-hook #'display-line-numbers-mode)
+
+(setq initial-scratch-message "")
 
 (use-package evil
   :straight t
   :init
-  (setq evil-undo-system 'undo-redo)
-  (setq evil-want-fine-undo t)
-  (setq evil-want-Y-yank-to-eol t)
-  (setq evil-want-C-d-scroll t)
-  (setq evil-want-C-u-scroll t)
   ;; Needed for evil-collection (see below):
   (setq evil-want-integration t) ;; This is optional since it's already set to t by default.
   (setq evil-want-keybinding nil)
-  :config
-  (evil-mode 1)
   :custom
+  (evil-undo-system 'undo-redo)
+  (evil-want-fine-undo t)
   (evil-lookup-func 'counsel-describe-symbol)
-  )
+  (evil-respect-visual-line-mode t)
+  :config
+  (setopt evil-want-Y-yank-to-eol t)
+  (evil-mode 1))
 
 (use-package evil-collection
+  :straight t
   :diminish evil-collection-unimpaired-mode
   :after evil
-  :straight t
   :config
   (evil-collection-init)
   )
 
-(with-eval-after-load 'evil-maps
-  (define-key evil-motion-state-map (kbd "RET") nil))
-
 (use-package evil-commentary
-  :diminish
   :straight t
+  :diminish
+  :after evil
   :config
   (evil-commentary-mode)
   )
 
 (use-package evil-goggles
-  :diminish
   :straight t
+  :diminish
   :config
   (evil-goggles-mode)
 
@@ -461,102 +424,159 @@
 (keymap-global-set "C-<tab>" #'other-frame)
 (keymap-global-set "C-<iso-lefttab>" (lambda () (interactive) (other-frame -1)))
 
+(global-set-key [escape] 'keyboard-escape-quit)
+
 (use-package which-key
-  :straight t
   :diminish
+  :custom
+  (which-key-idle-delay 1)
+  (which-key-idle-secondary-delay 0)
+  (which-key-max-description-length 80)
+  (which-key-show-early-on-C-h t)
+  (which-key-show-docstrings t)
   :config
-  (setq which-key-idle-delay 0)
   (which-key-mode)
-  (which-key-setup-side-window-bottom)
-  )
+  (which-key-setup-side-window-bottom))
 
 (use-package yasnippet
   :straight t
   :config
   (yas-global-mode 1))
 
-(global-set-key [escape] 'keyboard-escape-quit)
+(defun flyspell-on-for-buffer-type ()
+  "Enable Flyspell appropriately for the major mode of the current buffer.  Uses `flyspell-prog-mode' for modes derived from `prog-mode', so only strings and comments get checked.  All other buffers get `flyspell-mode' to check all text.  If flyspell is already enabled, does nothing."
+  (interactive)
+  (if (not (symbol-value flyspell-mode)) ; if not already on
+      (progn
+        (if (derived-mode-p 'prog-mode)
+            (progn
+              (message "Flyspell on (code)")
+              (flyspell-prog-mode))
+          ;; else
+          (progn
+            (message "Flyspell on (text)")
+            (flyspell-mode 1)))
+        (flyspell-buffer)
+        )))
 
-(setq initial-scratch-message "")
+(defun flyspell-toggle ()
+  "Turn Flyspell on if it is off, or off if it is on.  When turning on, it uses `flyspell-on-for-buffer-type' so code-vs-text is handled appropriately."
+  (interactive)
+  (if (symbol-value flyspell-mode)
+      (progn ; flyspell is on, turn it off
+        (message "Flyspell off")
+        (flyspell-mode -1))
+                                        ; else - flyspell is off, turn it on
+    (flyspell-on-for-buffer-type)))
 
-(add-hook 'org-mode-hook 'org-indent-mode)
-(add-hook 'org-mode-hook 'visual-line-mode)
-(add-hook 'org-mode-hook (lambda ()
-			   (require 'ox-beamer)
-			   (require 'ox-md)))
+(use-package magit
+:straight t
+:commands magit-status)
 
-;; Automatically tangle our Emacs.org config file when we save it
-(defun efs/org-babel-tangle-config ()
-  (when (string-equal (file-name-directory (buffer-file-name))
-                      (expand-file-name user-emacs-directory))
-    ;; Dynamic scoping to the rescue
-    (let ((org-confirm-babel-evaluate nil))
-      (org-babel-tangle))))
+(use-package diff-hl
+  :straight t
+  :after evil
+  :config
+  (add-hook 'magit-pre-refresh-hook 'diff-hl-magit-pre-refresh)
+  (add-hook 'magit-post-refresh-hook 'diff-hl-magit-post-refresh)
+  (evil-define-key 'motion diff-hl-mode-map (kbd "[ g") #'diff-hl-previous-hunk)
+  (evil-define-key 'motion diff-hl-mode-map (kbd "] g") #'diff-hl-next-hunk)
+  (global-diff-hl-mode)
+  )
 
-(add-hook 'org-mode-hook (lambda () (add-hook 'after-save-hook #'efs/org-babel-tangle-config)))
+(add-hook 'text-mode-hook
+	    (lambda ()
+	      (visual-line-mode)
+	      (let ((display-line-numbers-type 'visual))
+		(display-line-numbers-mode))))
 
-(setq org-highlight-latex-and-related '(latex script entities))
-(setq org-format-latex-options (plist-put org-format-latex-options :scale 1.5))
+(use-package pdf-tools
+  :straight t
+  :mode ("\\.[pP][dD][fF]\\'" . pdf-view-mode)
+  :config
+  (pdf-tools-install))
 
-(setq org-latex-classes 
-      '(("article" "\\documentclass[11pt,a4paper]{article} \\usepackage[margin=2.5cm]{geometry}"
-	 ("\\section{%s}" . "\\section*{%s}")
-	 ("\\subsection{%s}" . "\\subsection*{%s}")
-	 ("\\subsubsection{%s}" . "\\subsubsection*{%s}")
-	 ("\\paragraph{%s}" . "\\paragraph*{%s}")
-	 ("\\subparagraph{%s}" . "\\subparagraph*{%s}"))
-	("notes" "\\documentclass[11pt,a4paper,twocolumn]{article} \\usepackage[margin=1.5cm]{geometry}"
-	 ("\\section{%s}" . "\\section*{%s}")
-	 ("\\subsection{%s}" . "\\subsection*{%s}")
-	 ("\\subsubsection{%s}" . "\\subsubsection*{%s}")
-	 ("\\paragraph{%s}" . "\\paragraph*{%s}")
-	 ("\\subparagraph{%s}" . "\\subparagraph*{%s}"))
-	("report" "\\documentclass[11pt,a4paper]{report} \\usepackage[margin=2.5cm]{geometry}"
-	 ;; ("\\part{%s}" . "\\part*{%s}")
-	 ("\\chapter{%s}" . "\\chapter*{%s}")
-	 ("\\section{%s}" . "\\section*{%s}")
-	 ("\\subsection{%s}" . "\\subsection*{%s}")
-	 ("\\subsubsection{%s}" . "\\subsubsection*{%s}")
-	 ("\\paragraph{%s}" . "\\paragraph*{%s}")
-	 ("\\subparagraph{%s}" . "\\subparagraph*{%s}"))
-	("book" "\\documentclass[11pt,a4paper]{book}"
-	 ("\\part{%s}" . "\\part*{%s}")
-	 ("\\chapter{%s}" . "\\chapter*{%s}")
-	 ("\\section{%s}" . "\\section*{%s}")
-	 ("\\subsection{%s}" . "\\subsection*{%s}")
-	 ("\\subsubsection{%s}" . "\\subsubsection*{%s}"))))
+(use-package org
+  :defer t
+  :init
+  ;; indent text according to outline structure.
+  (add-hook 'org-mode-hook 'org-indent-mode)
 
-(setq org-latex-default-class "notes")
+  ;; Auto-tangle
+  (add-hook 'org-mode-hook (lambda ()
+			     (add-hook 'after-save-hook
+				       'org-babel-tangle nil t)))
 
-(setq
- org-export-headline-levels 6
- org-export-with-priority nil
- org-export-with-statistics-cookies nil
- org-export-with-tags nil
- org-export-with-toc nil
- org-export-with-todo-keywords nil
- )
+  :config
+  (setopt org-startup-folded 'fold
+	  org-startup-with-inline-images t
+	  org-startup-with-latex-preview t
+	  org-pretty-entities t
+	  org-hide-emphasis-markers t
+	  org-image-actual-width 400
+	  org-return-follows-link t
+	  org-imenu-depth 3
+	  org-highlight-latex-and-related '(latex script entities)
+	  org-format-latex-options (plist-put org-format-latex-options :scale 1.5))
 
-(setopt
- org-startup-folded 'fold
- org-startup-with-inline-images t
- org-startup-with-latex-preview t
- org-pretty-entities t
- org-hide-emphasis-markers t
- org-image-actual-width 400
- org-return-follows-link t
- org-imenu-depth 6
- )
+  ;; Default apps for opening attachments, links, etc.
+  (setopt org-file-apps
+	  '((auto-mode . emacs)
+	    (directory . system)
+	    ("pdf" . system)
+            ("\\.x?html?\\'" . system)
+	    (t . system)
+	    (system . (lambda (path _) (xdg-open path)))))
 
-(setopt org-file-apps
-	'((auto-mode . emacs)
-	  (directory . system)
-	  ("pdf" . system)
-          ("\\.x?html?\\'" . system)
-	  (t . system)
-	  (system . (lambda (path _) (xdg-open path)))))
+  ;; Fix <return> commands
+  (advice-add 'org-insert-heading :before (lambda (&rest _) (evil-insert 1)))
+  (evil-define-key 'normal org-mode-map (kbd "<return>") 'org-return)
+
+  ;;; SETUP EXPORTS
+  ;; Allow exporting to beamer or markdown
+  (require 'ox-beamer)
+  (require 'ox-md)
+
+  ;; Setup LaTeX classes
+  (setopt org-latex-classes 
+	  '(("article" "\\documentclass[11pt,a4paper]{article} \\usepackage[margin=2.5cm]{geometry}"
+	     ("\\section{%s}" . "\\section*{%s}")
+	     ("\\subsection{%s}" . "\\subsection*{%s}")
+	     ("\\subsubsection{%s}" . "\\subsubsection*{%s}")
+	     ("\\paragraph{%s}" . "\\paragraph*{%s}")
+	     ("\\subparagraph{%s}" . "\\subparagraph*{%s}"))
+	    ("notes" "\\documentclass[11pt,a4paper,twocolumn]{article} \\usepackage[margin=1.5cm]{geometry}"
+	     ("\\section{%s}" . "\\section*{%s}")
+	     ("\\subsection{%s}" . "\\subsection*{%s}")
+	     ("\\subsubsection{%s}" . "\\subsubsection*{%s}")
+	     ("\\paragraph{%s}" . "\\paragraph*{%s}")
+	     ("\\subparagraph{%s}" . "\\subparagraph*{%s}"))
+	    ("report" "\\documentclass[11pt,a4paper]{report} \\usepackage[margin=2.5cm]{geometry}"
+	     ;; ("\\part{%s}" . "\\part*{%s}")
+	     ("\\chapter{%s}" . "\\chapter*{%s}")
+	     ("\\section{%s}" . "\\section*{%s}")
+	     ("\\subsection{%s}" . "\\subsection*{%s}")
+	     ("\\subsubsection{%s}" . "\\subsubsection*{%s}")
+	     ("\\paragraph{%s}" . "\\paragraph*{%s}")
+	     ("\\subparagraph{%s}" . "\\subparagraph*{%s}"))
+	    ("book" "\\documentclass[11pt,a4paper]{book}"
+	     ("\\part{%s}" . "\\part*{%s}")
+	     ("\\chapter{%s}" . "\\chapter*{%s}")
+	     ("\\section{%s}" . "\\section*{%s}")
+	     ("\\subsection{%s}" . "\\subsection*{%s}")
+	     ("\\subsubsection{%s}" . "\\subsubsection*{%s}"))))
+
+  ;; Default export settings
+  (setopt org-latex-default-class "notes"
+	  org-export-headline-levels 6
+	  org-export-with-priority nil
+	  org-export-with-statistics-cookies nil
+	  org-export-with-tags nil
+	  org-export-with-toc nil
+	  org-export-with-todo-keywords nil))
 
 (use-package org-download
+  :straight t
   :after org
   :custom
   (org-download-method 'directory)
@@ -567,34 +587,12 @@
 ;; Drag-and-drop to `dired`
 (add-hook 'dired-mode-hook 'org-download-enable)
 
-(defun better-org-indent-block ()
-  (interactive)
-  (org-babel-goto-src-block-head)
-  (org-indent-block)
-  )
-
-(defun better-org-insert-heading ()
-  (interactive)
-  (org-insert-heading-respect-content)
-  (evil-insert 1)
-  )
-
-(defun better-org-insert-todo-heading ()
-  (interactive)
-  (org-insert-todo-heading-respect-content)
-  (evil-insert 1)
-  )
-
-(with-eval-after-load "org"
-  (define-key org-mode-map (kbd "C-<return>") #'better-org-insert-heading)
-  (define-key org-mode-map (kbd "C-S-<return>") #'better-org-insert-todo-heading))
-
 (my-leader-def org-mode-map
   "c" '("Org mode" . (keymap))
 
   ;; Code blocks
   "c b" '("Code block" . (keymap))
-  "c b i" '("Indent block" . better-org-indent-block)
+  "c b i" '("Indent block" . org-indent-block)
   "c b r" '("Hide/show result" . org-babel-hide-result-toggle)
   "c b R" '("Remove result" . org-babel-remove-result)
   "c b C-r" '("Remove ALL results" .
@@ -620,19 +618,14 @@
   "c s" '("Sort" . org-sort)
   )
 
-(use-package pdf-tools
-  :config
-  (pdf-tools-install)
-  )
-
-(use-package auctex)
+(use-package auctex :straight t)
 
 (setq TeX-auto-save t)
 (setq TeX-parse-self t)
 (setq-default TeX-master nil)
 
-(add-hook 'LaTeX-mode-hook 'visual-line-mode)
-(add-hook 'LaTeX-mode-hook 'auto-fill-mode)
+;; (add-hook 'LaTeX-mode-hook 'visual-line-mode)
+;; (add-hook 'LaTeX-mode-hook 'auto-fill-mode)
 (add-hook 'LaTeX-mode-hook 'flyspell-mode)
 (add-hook 'LaTeX-mode-hook 'LaTeX-math-mode)
 
@@ -716,40 +709,12 @@
   :mode ("README\\.md\\'" . gfm-mode)
   :init
   (setq markdown-command "pandoc")
-  (setq markdown-enable-math t)
-  )
+  (setq markdown-enable-math t))
 
-(defun flyspell-on-for-buffer-type ()
-  "Enable Flyspell appropriately for the major mode of the current buffer.  Uses `flyspell-prog-mode' for modes derived from `prog-mode', so only strings and comments get checked.  All other buffers get `flyspell-mode' to check all text.  If flyspell is already enabled, does nothing."
-  (interactive)
-  (if (not (symbol-value flyspell-mode)) ; if not already on
-      (progn
-        (if (derived-mode-p 'prog-mode)
-            (progn
-              (message "Flyspell on (code)")
-              (flyspell-prog-mode))
-          ;; else
-          (progn
-            (message "Flyspell on (text)")
-            (flyspell-mode 1)))
-        (flyspell-buffer)
-        )))
-
-(defun flyspell-toggle ()
-  "Turn Flyspell on if it is off, or off if it is on.  When turning on, it uses `flyspell-on-for-buffer-type' so code-vs-text is handled appropriately."
-  (interactive)
-  (if (symbol-value flyspell-mode)
-      (progn ; flyspell is on, turn it off
-        (message "Flyspell off")
-        (flyspell-mode -1))
-                                        ; else - flyspell is off, turn it on
-    (flyspell-on-for-buffer-type)))
-
-(use-package pyenv-mode
-  :straight t
-  :config
-  (pyenv-mode)
-  )
+(add-hook 'prog-mode-hook
+	  (lambda ()
+	    (let ((display-line-numbers-type 'relative))
+	      (display-line-numbers-mode))))
 
 (my-leader-def python-mode-map
   "c" '("Python" . (keymap))
@@ -777,5 +742,4 @@
          (start-process "" nil "firefox" "--new-tab" (concat "http://localhost:" port))))
 
 (use-package yaml-mode
-  :straight t
-  )
+  :straight t)
