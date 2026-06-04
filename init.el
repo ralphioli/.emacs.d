@@ -23,20 +23,25 @@
 (straight-use-package 'use-package)
 (setq use-package-compute-statistics t)
 
+(setopt make-backup-files nil)
+
 (setq custom-file (concat user-emacs-directory "custom.el"))
 (when (file-exists-p custom-file)
   (load custom-file))
 
 (defun xdg-open (&optional path)
-  "Run xdg-open on PATH (if not specified: current buffer)"
+  "Run xdg-open on PATH (if not specified: current buffer file).
+With \\[universal-argument] prefix: open the directory instead."
   (interactive)
   (-if-let (path (or path
-		     (pcase major-mode
-                       ('dired-mode dired-directory)
-		       (_ (buffer-file-name)))))
-      (let (process-connection-type)
-	(start-process "" nil "xdg-open"
-		       (expand-file-name path)))
+		     (expand-file-name (pcase major-mode
+					 ('dired-mode dired-directory)
+  					 (_ (buffer-file-name))))))
+      (let ((target (if current-prefix-arg
+  			(file-name-directory path)
+  		      path))
+  	    (process-connection-type nil))
+  	(start-process "" nil "xdg-open" target))
     (message "Nothing to open here.")))
 
 (defun get-title-from-url (url)
@@ -417,6 +422,7 @@
     "x" '(:ignore t :wk "Command")
     "x x" '(counsel-M-x :wk "Run Command")
     "x h" '(counsel-command-history :wk "Command History")
+    "x o" 'xdg-open
     ))
 
 (keymap-global-set "C-S-n" #'make-frame)
@@ -429,7 +435,7 @@
 (use-package which-key
   :diminish
   :custom
-  (which-key-idle-delay 1)
+  (which-key-idle-delay 1.0)
   (which-key-idle-secondary-delay 0)
   (which-key-max-description-length 80)
   (which-key-show-early-on-C-h t)
@@ -605,6 +611,12 @@
   "c i i" '("Toggle inline images" . org-toggle-inline-images)
   "c i p" '("Paste from clipboard" . org-download-clipboard)
   "c i P" '("Paste from link" . org-download-yank)
+
+  ;; Copy commands
+  "c y" '("Copy" . (keymap))
+  "c y y" 'org-copy-special
+  "c y i" 'org-id-copy
+  "c y v" 'org-copy-visible
 
   ;; Other misc shortcuts
   "c a" '("Attach" . org-attach)
