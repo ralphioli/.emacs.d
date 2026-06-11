@@ -50,6 +50,13 @@ Prevent =package.el= from loading:
   (straight-use-package 'use-package)
   (setq use-package-compute-statistics t)
 #+end_src
+
+For =:ensure-system-package=
+#+begin_src emacs-lisp
+  (use-package system-packages :straight t)
+  (use-package use-package-ensure-system-package)
+#+end_src
+
 ** Keep folders clean
 Turn off backup files
 #+begin_src emacs-lisp
@@ -109,7 +116,7 @@ Source scripts:
         )))
 #+end_src
 
-** SSH stuff
+** COMMENT SSH stuff
 Get hosts from ssh config file:
 #+begin_src emacs-lisp
   (defun parse-ssh-config-hosts (ssh-config-file)
@@ -479,7 +486,7 @@ Install general.el and define some global keybindings.
       "f f" '(counsel-find-file :wk "Find file")
       "f o" '(find-file-other-window :wk "Find file Other window")
       "f r" '(counsel-recentf :wk "Recent files")
-      "f s" '(find-file-ssh :wk "Find file (SSH)")
+      ;; "f s" '(find-file-ssh :wk "Find file (SSH)")
       ;; Treemacs
       "f t" '(:ignore t :wk "Treemacs")
       "f t a" '(treemacs-add-project-to-workspace :wk "Add project to workspace")
@@ -508,17 +515,17 @@ Install general.el and define some global keybindings.
 
       ;; TERMINAL
       "t" '(:ignore t :wk "Terminal")
-      "t n" '(multi-term-next :wk "Next Terminal")
-      "t p" '(multi-term-prev :wk "Previous Terminal")
-      "t s" '(ssh-multi-term :wk "SSH connection")
-      "t t" '(multi-term :wk "New Terminal")
+      ;; "t n" '(multi-term-next :wk "Next Terminal")
+      ;; "t p" '(multi-term-prev :wk "Previous Terminal")
+      ;; "t s" '(ssh-multi-term :wk "SSH connection")
+      ;; "t t" '(multi-term :wk "New Terminal")
 
       ;; VIEW
       "v" '(:ignore t :wk "View")
-      "v g" '(diff-hl-mode :wk "Git Diff Highlighting")
-      "v l" '(display-line-numbers-mode :wk "Line numbers")
-      "v t" '(toggle-truncate-lines :wk "Truncate lines")
-      "v v" '(visual-line-mode :wk "Visual line mode")
+      ;; "v g" '(diff-hl-mode :wk "Git Diff Highlighting")
+      ;; "v l" '(display-line-numbers-mode :wk "Line numbers")
+      ;; "v t" '(toggle-truncate-lines :wk "Truncate lines")
+      ;; "v v" '(visual-line-mode :wk "Visual line mode")
 
       ;; WINDOWS
       "w" '(:ignore t :wk "Windows")
@@ -536,10 +543,10 @@ Install general.el and define some global keybindings.
       "w w" '(evil-window-next :wk "Goto next window")
       "w W" '(evil-window-prev :wk "Goto previous window")
       ;; Move Windows
-      "w H" '(buf-move-left :wk "Buffer move left")
-      "w J" '(buf-move-down :wk "Buffer move down")
-      "w K" '(buf-move-up :wk "Buffer move up")
-      "w L" '(buf-move-right :wk "Buffer move right")
+      ;; "w H" '(buf-move-left :wk "Buffer move left")
+      ;; "w J" '(buf-move-down :wk "Buffer move down")
+      ;; "w K" '(buf-move-up :wk "Buffer move up")
+      ;; "w L" '(buf-move-right :wk "Buffer move right")
 
       ;; COMMAND
       "x" '(:ignore t :wk "Command")
@@ -834,19 +841,21 @@ For inserting images
 ** LaTeX
 Install AucTeX and do some [[https://www.emacswiki.org/emacs/AUCTeX#h5o-2][customary customization]]:
 #+begin_src emacs-lisp
-  (use-package auctex :straight t)
+      (use-package auctex
+        :straight t
+        :ensure-system-package (latex . texlive-full))
 
-  (setq TeX-auto-save t)
-  (setq TeX-parse-self t)
-  (setq-default TeX-master nil)
+      (setq TeX-auto-save t)
+      (setq TeX-parse-self t)
+      (setq-default TeX-master nil)
 
-  ;; (add-hook 'LaTeX-mode-hook 'visual-line-mode)
-  ;; (add-hook 'LaTeX-mode-hook 'auto-fill-mode)
-  (add-hook 'LaTeX-mode-hook 'flyspell-mode)
-  (add-hook 'LaTeX-mode-hook 'LaTeX-math-mode)
+      ;; (add-hook 'LaTeX-mode-hook 'visual-line-mode)
+      ;; (add-hook 'LaTeX-mode-hook 'auto-fill-mode)
+      (add-hook 'LaTeX-mode-hook 'flyspell-mode)
+      (add-hook 'LaTeX-mode-hook 'LaTeX-math-mode)
 
-  (add-hook 'LaTeX-mode-hook 'turn-on-reftex)
-  (setq reftex-plug-into-AUCTeX t)
+      (add-hook 'LaTeX-mode-hook 'turn-on-reftex)
+      (setq reftex-plug-into-AUCTeX t)
 #+end_src
 
 Open PDFs in Emacs: 
@@ -922,7 +931,7 @@ Open PDFs in Emacs:
     )
 #+end_src
 
-*** Word-count function
+*** COMMENT Word-count function
 Use detex output for word count
 #+begin_src emacs-lisp
   (add-hook 'LaTeX-mode-hook

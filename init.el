@@ -23,6 +23,9 @@
 (straight-use-package 'use-package)
 (setq use-package-compute-statistics t)
 
+(use-package system-packages :straight t)
+(use-package use-package-ensure-system-package)
+
 (setopt make-backup-files nil)
 
 (setq custom-file (concat user-emacs-directory "custom.el"))
@@ -53,47 +56,6 @@ With \\[universal-argument] prefix: open the directory instead."
     (let ((dom (libxml-parse-html-region (point) (point-max))))
       (dom-text (car (dom-by-tag dom 'title)))
       )))
-
-(defun parse-ssh-config-hosts (ssh-config-file)
-  "Parse the SSH config file and return a list of hosts."
-  (let ((hosts '()))
-    (when (file-readable-p ssh-config-file)
-      (with-temp-buffer
-        (insert-file-contents ssh-config-file)
-        (goto-char (point-min))
-        (while (re-search-forward "^Host[ \t]+\\(.*\\)$" nil t)
-          (let ((host-line (match-string 1)))
-            (dolist (host (split-string host-line))
-              (unless (string-match-p "[*?]" host) ;; Ignore wildcards
-                (push host hosts)))))))
-    (delete-dups hosts)))
-
-(defun ivy-ssh-config-hosts ()
-  "Return a selected SSH host from the SSH config file using Ivy."
-  (let* ((ssh-config-file (expand-file-name "~/.ssh/config"))
-         (hosts (parse-ssh-config-hosts ssh-config-file)))
-    (if hosts
-        (ivy-read "SSH Hosts: " hosts)
-      (user-error "No hosts found in %s" ssh-config-file))))
-
-(defun find-file-ssh ()
-  "Open a file on a remote SSH host."
-  (interactive)
-  (let* ((host (ivy-ssh-config-hosts))
-         (default-directory (concat "/ssh:" host ":")))
-    (call-interactively #'counsel-find-file)))
-
-(defun ssh-multi-term ()
-  (interactive)
-  (let* (
-         (host (ivy-ssh-config-hosts))
-         (multi-term-program "/bin/sh")
-         (multi-term-buffer-name (format "SSH: %s" host))
-         (term-cmd (format "ssh %s\n" host))
-         (term-buffer (multi-term))
-         )
-    (term-send-raw-string term-cmd)
-    ))
 
 (use-package dracula-theme
   :straight t
@@ -357,7 +319,7 @@ With \\[universal-argument] prefix: open the directory instead."
     "f f" '(counsel-find-file :wk "Find file")
     "f o" '(find-file-other-window :wk "Find file Other window")
     "f r" '(counsel-recentf :wk "Recent files")
-    "f s" '(find-file-ssh :wk "Find file (SSH)")
+    ;; "f s" '(find-file-ssh :wk "Find file (SSH)")
     ;; Treemacs
     "f t" '(:ignore t :wk "Treemacs")
     "f t a" '(treemacs-add-project-to-workspace :wk "Add project to workspace")
@@ -386,17 +348,17 @@ With \\[universal-argument] prefix: open the directory instead."
 
     ;; TERMINAL
     "t" '(:ignore t :wk "Terminal")
-    "t n" '(multi-term-next :wk "Next Terminal")
-    "t p" '(multi-term-prev :wk "Previous Terminal")
-    "t s" '(ssh-multi-term :wk "SSH connection")
-    "t t" '(multi-term :wk "New Terminal")
+    ;; "t n" '(multi-term-next :wk "Next Terminal")
+    ;; "t p" '(multi-term-prev :wk "Previous Terminal")
+    ;; "t s" '(ssh-multi-term :wk "SSH connection")
+    ;; "t t" '(multi-term :wk "New Terminal")
 
     ;; VIEW
     "v" '(:ignore t :wk "View")
-    "v g" '(diff-hl-mode :wk "Git Diff Highlighting")
-    "v l" '(display-line-numbers-mode :wk "Line numbers")
-    "v t" '(toggle-truncate-lines :wk "Truncate lines")
-    "v v" '(visual-line-mode :wk "Visual line mode")
+    ;; "v g" '(diff-hl-mode :wk "Git Diff Highlighting")
+    ;; "v l" '(display-line-numbers-mode :wk "Line numbers")
+    ;; "v t" '(toggle-truncate-lines :wk "Truncate lines")
+    ;; "v v" '(visual-line-mode :wk "Visual line mode")
 
     ;; WINDOWS
     "w" '(:ignore t :wk "Windows")
@@ -414,10 +376,10 @@ With \\[universal-argument] prefix: open the directory instead."
     "w w" '(evil-window-next :wk "Goto next window")
     "w W" '(evil-window-prev :wk "Goto previous window")
     ;; Move Windows
-    "w H" '(buf-move-left :wk "Buffer move left")
-    "w J" '(buf-move-down :wk "Buffer move down")
-    "w K" '(buf-move-up :wk "Buffer move up")
-    "w L" '(buf-move-right :wk "Buffer move right")
+    ;; "w H" '(buf-move-left :wk "Buffer move left")
+    ;; "w J" '(buf-move-down :wk "Buffer move down")
+    ;; "w K" '(buf-move-up :wk "Buffer move up")
+    ;; "w L" '(buf-move-right :wk "Buffer move right")
 
     ;; COMMAND
     "x" '(:ignore t :wk "Command")
@@ -644,7 +606,9 @@ With \\[universal-argument] prefix: open the directory instead."
   "c s" '("Sort" . org-sort)
   )
 
-(use-package auctex :straight t)
+(use-package auctex
+  :straight t
+  :ensure-system-package (latex . texlive-full))
 
 (setq TeX-auto-save t)
 (setq TeX-parse-self t)
@@ -715,20 +679,6 @@ With \\[universal-argument] prefix: open the directory instead."
   "c q r" '("Fill region" . LaTeX-fill-region)
   "c q s" '("Fill section" . LaTeX-fill-section)
   )
-
-(add-hook 'LaTeX-mode-hook
-          (lambda ()
-            (setq-local wc-count-words-function
-                        (function (lambda (rstart rend)
-                                    (let* ((output-buffer-name "*detex-output*")
-                                           (output-buffer (generate-new-buffer output-buffer-name)))
-                                      (unwind-protect
-                                          (progn
-                                            (call-process-region rstart rend "detex"
-                                                                 nil output-buffer-name nil)
-                                            (with-current-buffer output-buffer
-                                              (count-words (point-min) (point-max))))
-                                        (kill-buffer output-buffer))))))))
 
 (use-package markdown-mode
   :straight t
