@@ -3,11 +3,6 @@
 # key: <s
 # --
 
-#+begin_src ${1:$$(when yas-moving-away-p (pcase yas-text
-	("el" "emacs-lisp")
-	("py" "python")
-	("bib" "bibtex")
-	(_ nil)
-    ))}
+#+begin_src $1
 $0
 #+end_src

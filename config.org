@@ -84,10 +84,11 @@ Source scripts:
     "Run xdg-open on PATH (if not specified: current buffer file).
   With \\[universal-argument] prefix: open the directory instead."
     (interactive)
-    (-if-let (path (or path
-  		     (expand-file-name (pcase major-mode
-  					 ('dired-mode dired-directory)
-    					 (_ (buffer-file-name))))))
+    (-if-let (path (or path (ignore-errors
+  			    (expand-file-name
+  			     (pcase major-mode
+  			       ('dired-mode dired-directory)
+    			       (_ buffer-file-name))))))
         (let ((target (if current-prefix-arg
     			(file-name-directory path)
     		      path))
@@ -589,13 +590,20 @@ Use =ESC= instead of =Ctrl-G=:
         (yas-global-mode 1))
 #+end_src
 
-** COMMENT Auto-Complete
+** Company Mode
 #+begin_src emacs-lisp
-  (use-package auto-complete
+  (use-package company
     :straight t
-    :config 
-    (ac-config-default)
-    )
+    :custom
+    (company-minimum-prefix-length 1)
+    (company-idle-delay 0)
+    (company-backends '((company-capf :with company-yasnippet)
+  		      (company-keywords :with company-yasnippet)))
+    (company-frontends '(company-pseudo-tooltip-unless-just-one-frontend
+  		       company-echo-metadata-frontend
+  		       company-preview-common-frontend))
+    :config
+    (global-company-mode))
 #+end_src
 
 ** Flyspell
@@ -659,6 +667,13 @@ Use =ESC= instead of =Ctrl-G=:
   	      (visual-line-mode)
   	      (let ((display-line-numbers-type 'visual))
   		(display-line-numbers-mode))))
+#+end_src
+*** COMMENT Mixed pitch mode
+#+begin_src emacs-lisp
+  (use-package mixed-pitch
+    :straight t
+    :diminish
+    :hook (text-mode . mixed-pitch-mode))
 #+end_src
 
 *** PDF Tools

@@ -33,10 +33,11 @@
   "Run xdg-open on PATH (if not specified: current buffer file).
 With \\[universal-argument] prefix: open the directory instead."
   (interactive)
-  (-if-let (path (or path
-		     (expand-file-name (pcase major-mode
-					 ('dired-mode dired-directory)
-  					 (_ (buffer-file-name))))))
+  (-if-let (path (or path (ignore-errors
+			    (expand-file-name
+			     (pcase major-mode
+			       ('dired-mode dired-directory)
+  			       (_ buffer-file-name))))))
       (let ((target (if current-prefix-arg
   			(file-name-directory path)
   		      path))
@@ -448,6 +449,19 @@ With \\[universal-argument] prefix: open the directory instead."
   :straight t
   :config
   (yas-global-mode 1))
+
+(use-package company
+  :straight t
+  :custom
+  (company-minimum-prefix-length 1)
+  (company-idle-delay 0)
+  (company-backends '((company-capf :with company-yasnippet)
+		      (company-keywords :with company-yasnippet)))
+  (company-frontends '(company-pseudo-tooltip-unless-just-one-frontend
+		       company-echo-metadata-frontend
+		       company-preview-common-frontend))
+  :config
+  (global-company-mode))
 
 (defun flyspell-on-for-buffer-type ()
   "Enable Flyspell appropriately for the major mode of the current buffer.  Uses `flyspell-prog-mode' for modes derived from `prog-mode', so only strings and comments get checked.  All other buffers get `flyspell-mode' to check all text.  If flyspell is already enabled, does nothing."
