@@ -28,9 +28,18 @@
 
 (setopt make-backup-files nil)
 
+(defun expand-file-name-cache (file-name)
+  (let* ((cache-dir (expand-file-name ".cache" user-emacs-directory))
+	 (file-path (expand-file-name file-name cache-dir))
+	 (file-dir (file-name-directory file-path)))
+    (make-directory file-dir t) file-path))
+
 (setq custom-file (concat user-emacs-directory "custom.el"))
 (when (file-exists-p custom-file)
   (load custom-file))
+
+(setopt recentf-save-file (expand-file-name-cache "recentf.el"))
+(recentf-mode)
 
 (defun xdg-open (&optional path)
   "Run xdg-open on PATH (if not specified: current buffer file).
@@ -93,9 +102,6 @@ With \\[universal-argument] prefix: open the directory instead."
 (use-package treemacs
   :straight t
   :defer t
-  :init
-  (with-eval-after-load 'winum
-    (define-key winum-keymap (kbd "M-0") #'treemacs-select-window))
   :config
   (progn
     (setq treemacs-collapse-dirs                   (if treemacs-python-executable 3 0)
@@ -116,7 +122,7 @@ With \\[universal-argument] prefix: open the directory instead."
 	    treemacs-hide-dot-git-directory          t
 	    treemacs-indentation                     2
 	    treemacs-indentation-string              " "
-	    treemacs-is-never-other-window           nil
+	    treemacs-is-never-other-window           t
 	    treemacs-max-git-entries                 5000
 	    treemacs-missing-project-action          'ask
 	    treemacs-move-files-by-mouse-dragging    t
@@ -169,7 +175,7 @@ With \\[universal-argument] prefix: open the directory instead."
 	(`(t . _)
 	 (treemacs-git-mode 'simple)))
 
-    (treemacs-hide-gitignored-files-mode nil))
+    (treemacs-hide-gitignored-files-mode -1))
   :bind
   (:map global-map
 	  ("C-/"       . treemacs-select-window)
@@ -185,9 +191,9 @@ With \\[universal-argument] prefix: open the directory instead."
   :after (treemacs evil)
   :straight t)
 
-;; (use-package treemacs-projectile
-;;   :after (treemacs projectile)
-;;   :straight t)
+(use-package treemacs-projectile
+  :after (treemacs projectile)
+  :straight t)
 
 (use-package treemacs-icons-dired
   :hook (dired-mode . treemacs-icons-dired-enable-once)
@@ -209,19 +215,22 @@ With \\[universal-argument] prefix: open the directory instead."
 
 (treemacs-start-on-boot)
 
-(scroll-bar-mode -1) ;; Hide scrollbar
-(tool-bar-mode -1) ;; Hide toolbar
-(menu-bar-mode -1) ;; Hide menubar
+(setopt display-line-numbers-width-start t)
 
-(setq inhibit-startup-screen t) ;; Disable startup screen
-(add-to-list 'default-frame-alist '(fullscreen . maximized)) ;; Maximize frames by default
+(defun enable-line-numbering ()
+  (interactive)
+  (if visual-line-mode
+      (let ((display-line-numbers-type 'visual))
+	(display-line-numbers-mode))
+      (let ((display-line-numbers-type 'relative))
+	(display-line-numbers-mode))))
+
+(add-hook 'text-mode-hook 'enable-line-numbering)
+(add-hook 'prog-mode-hook 'enable-line-numbering)
+(add-hook 'visual-line-mode-hook 'enable-line-numbering)
 
 (setopt use-short-answers t) ;; use y/n in prompts instead of typing out yes/no
-
-;; (setq display-line-numbers-type 'relative)
-;; (add-hook 'prog-mode-hook #'display-line-numbers-mode)
-
-(setq initial-scratch-message "")
+(setq initial-scratch-message "") ;; Make scratch buffer empty by default
 
 (use-package evil
   :straight t
@@ -286,6 +295,11 @@ With \\[universal-argument] prefix: open the directory instead."
   (evil-define-key '(normal visual) 'global (kbd "g C-x") 'evil-numbers/dec-at-pt-incremental)
 )
 
+(use-package evil-visualstar
+  :straight t
+  :config (global-evil-visualstar-mode)
+  :after evil)
+
 (use-package general
   :straight t
   :config
@@ -302,90 +316,95 @@ With \\[universal-argument] prefix: open the directory instead."
     "SPC" '("Imenu" . counsel-imenu)
 
     ;; BUFFERS
-    "b" '(:ignore t :wk "Buffers")
-    "b b" '(counsel-switch-buffer :wk "Switch to buffer")
-    "b i" '(ibuffer :wk "Ibuffer")
-    "b k" '(kill-current-buffer :wk "Kill this buffer")
-    "b n" '(next-buffer :wk "Next buffer")
-    "b o" '(counsel-switch-buffer-other-window :wk "Switch buffer Other window")
-    "b O" '(switch-to-buffer-other-frame :wk "Switch buffer Other frame")
-    "b p" '(previous-buffer :wk "Previous buffer")
-    "b r" '(rename-buffer :wk "Rename buffer")
-    "b s" '(scratch-buffer :wk "Scratch buffer")
-    "b x" '(kill-buffer-and-window :wk "Kill buffer, close window")
+    "b" '("Buffers" . (keymap))
+    "b b" '("Switch to buffer" . counsel-switch-buffer)
+    "b i" '("Ibuffer" . ibuffer)
+    "b k" '("Kill this buffer" . kill-current-buffer)
+    "b n" '("Next buffer" . next-buffer)
+    "b o" '("Switch buffer Other window" . counsel-switch-buffer-other-window)
+    "b O" '("Switch buffer Other frame" . switch-to-buffer-other-frame)
+    "b p" '("Previous buffer" . previous-buffer)
+    "b r" '("Rename buffer" . rename-buffer)
+    "b s" '("Scratch buffer" . scratch-buffer)
+    "b x" '("Kill buffer, close window" . kill-buffer-and-window)
 
     ;; FILES
-    "f" '(:ignore t :wk "Files")
-    "f f" '(counsel-find-file :wk "Find file")
-    "f o" '(find-file-other-window :wk "Find file Other window")
-    "f r" '(counsel-recentf :wk "Recent files")
-    ;; "f s" '(find-file-ssh :wk "Find file (SSH)")
+    "f" '("Files" . (keymap))
+    "f f" '("Find file" . counsel-find-file)
+    "f o" '("Find file Other window" . find-file-other-window)
+    "f r" '("Recent files" . counsel-recentf)
+    ;; "f s" '("Find file (SSH)" . find-file-ssh)
     ;; Treemacs
-    "f t" '(:ignore t :wk "Treemacs")
-    "f t a" '(treemacs-add-project-to-workspace :wk "Add project to workspace")
-    "f t c" '(treemacs-create-workspace :wk "Create workspace")
-    "f t d" '(treemacs-remove-workspace :wk "Delete workspace")
-    "f t e" '(treemacs-edit-workspaces :wk "Edit workspaces")
-    "f t r" '(treemacs-remove-project-from-workspace :wk "Remove project from workspace")
+    "f t" '("Treemacs" . (keymap))
+    "f t a" '("Add project to workspace" . treemacs-add-project-to-workspace)
+    "f t c" '("Create workspace" . treemacs-create-workspace)
+    "f t d" '("Delete workspace" . treemacs-remove-workspace)
+    "f t e" '("Edit workspaces" . treemacs-edit-workspaces)
+    "f t r" '("Remove project from workspace" . treemacs-remove-project-from-workspace)
     "f t s" '((lambda () (interactive)
 		(let (treemacs-select-when-already-in-treemacs stay)
 		  (treemacs-select-window t)))
 	      :wk "Switch workspace")
 
     ;; GIT
-    "g" '(:ignore t :wk "Git")
-    "g c" '(magit-checkout :wk "Checkout")
-    "g g" '(magit-status :wk "Magit")
-    "g r" '(diff-hl-revert-hunk :wk "Revert hunk")
-    "g s" '(diff-hl-show-hunk :wk "Show hunk")
-    "g v" '(diff-hl-mode :wk "Toggle diff highlighting")
+    "g" '("Git" . (keymap))
+    "g c" '("Checkout" . magit-checkout)
+    "g g" '("Magit" . magit-status)
+    "g r" '("Revert hunk" . diff-hl-revert-hunk)
+    "g s" '("Show hunk" . diff-hl-show-hunk)
+    "g v" '("Toggle diff highlighting" . diff-hl-mode)
 
     ;; SPELL CHECKING
-    "s" '(:ignore t :wk "Spell Checking")
-    "s s" '(flyspell-toggle :wk "Toggle")
-    "s b" '(flyspell-buffer :wk "Scan Buffer")
-    "s d" '(ispell-change-dictionary :wk "Change dictionary")
+    "s" '("Spell Checking" . (keymap))
+    "s s" '("Toggle" . flyspell-toggle)
+    "s b" '("Scan Buffer" . flyspell-buffer)
+    "s d" '("Change dictionary" . ispell-change-dictionary)
 
     ;; TERMINAL
-    "t" '(:ignore t :wk "Terminal")
-    ;; "t n" '(multi-term-next :wk "Next Terminal")
-    ;; "t p" '(multi-term-prev :wk "Previous Terminal")
-    ;; "t s" '(ssh-multi-term :wk "SSH connection")
-    ;; "t t" '(multi-term :wk "New Terminal")
+    ;; "t" '("Terminal" . (keymap))
+    ;; "t n" '("Next Terminal" . multi-term-next)
+    ;; "t p" '("Previous Terminal" . multi-term-prev)
+    ;; "t s" '("SSH connection" . ssh-multi-term)
+    ;; "t t" '("New Terminal" . multi-term)
 
     ;; VIEW
-    "v" '(:ignore t :wk "View")
-    ;; "v g" '(diff-hl-mode :wk "Git Diff Highlighting")
-    ;; "v l" '(display-line-numbers-mode :wk "Line numbers")
-    ;; "v t" '(toggle-truncate-lines :wk "Truncate lines")
-    ;; "v v" '(visual-line-mode :wk "Visual line mode")
+    ;; "v" '("View" . (keymap))
+    ;; "v g" '("Git Diff Highlighting" . diff-hl-mode)
+    ;; "v l" '("Line numbers" . display-line-numbers-mode)
+    ;; "v t" '("Truncate lines" . toggle-truncate-lines)
+    ;; "v v" '("Visual line mode" . visual-line-mode)
 
     ;; WINDOWS
-    "w" '(:ignore t :wk "Windows")
+    "w" '("Windows" . (keymap))
     ;; Window splits
-    "w c" '(evil-window-delete :wk "Close window")
-    "w n" '(evil-window-new :wk "New window")
-    "w s" '(evil-window-split :wk "Horizontal split window")
-    "w v" '(evil-window-vsplit :wk "Vertical split window")
-    "w x" '(kill-buffer-and-window :wk "Kill buffer, close window")
+    "w c" '("Close window" . evil-window-delete)
+    "w n" '("New window" . evil-window-new)
+    "w s" '("Horizontal split window" . evil-window-split)
+    "w v" '("Vertical split window" . evil-window-vsplit)
+    "w x" '("Kill buffer, close window" . kill-buffer-and-window)
     ;; Window motions
-    "w h" '(evil-window-left :wk "Window left")
-    "w j" '(evil-window-down :wk "Window down")
-    "w k" '(evil-window-up :wk "Window up")
-    "w l" '(evil-window-right :wk "Window right")
-    "w w" '(evil-window-next :wk "Goto next window")
-    "w W" '(evil-window-prev :wk "Goto previous window")
+    "w h" '("Window left" . evil-window-left)
+    "w j" '("Window down" . evil-window-down)
+    "w k" '("Window up" . evil-window-up)
+    "w l" '("Window right" . evil-window-right)
+    "w w" '("Goto next window" . evil-window-next)
+    "w W" '("Goto previous window" . evil-window-prev)
     ;; Move Windows
-    ;; "w H" '(buf-move-left :wk "Buffer move left")
-    ;; "w J" '(buf-move-down :wk "Buffer move down")
-    ;; "w K" '(buf-move-up :wk "Buffer move up")
-    ;; "w L" '(buf-move-right :wk "Buffer move right")
+    ;; "w H" '("Buffer move left" . buf-move-left)
+    ;; "w J" '("Buffer move down" . buf-move-down)
+    ;; "w K" '("Buffer move up" . buf-move-up)
+    ;; "w L" '("Buffer move right" . buf-move-right)
 
     ;; COMMAND
-    "x" '(:ignore t :wk "Command")
-    "x x" '(counsel-M-x :wk "Run Command")
-    "x h" '(counsel-command-history :wk "Command History")
+    "x" '("Command" . (keymap))
+    "x x" '("Run Command" . counsel-M-x)
+    "x h" '("Command History" . counsel-command-history)
     "x o" 'xdg-open
+
+    "y" '("Yasnippet" . (keymap))
+    "y s" 'yas-insert-snippet
+    "y n" 'yas-new-snippet
+    "y f" 'yas-visit-snippet-file
     ))
 
 (keymap-global-set "C-S-n" #'make-frame)
@@ -409,21 +428,30 @@ With \\[universal-argument] prefix: open the directory instead."
 
 (use-package yasnippet
   :straight t
-  :config
-  (yas-global-mode 1))
+  :diminish yas-minor-mode
+  :config (yas-reload-all)
+  :hook
+  ((text-mode . yas-minor-mode)
+   (prog-mode . yas-minor-mode)))
 
 (use-package company
   :straight t
+  :diminish
   :custom
   (company-minimum-prefix-length 1)
   (company-idle-delay 0)
-  (company-backends '((company-capf :with company-yasnippet)
-		      (company-keywords :with company-yasnippet)))
-  (company-frontends '(company-pseudo-tooltip-unless-just-one-frontend
-		       company-echo-metadata-frontend
-		       company-preview-common-frontend))
-  :config
-  (global-company-mode))
+  (company-require-match nil)
+  (company-backends '(company-capf company-keywords))
+  (company-frontends '(company-preview-common-frontend))
+  :hook (prog-mode text-mode))
+
+(use-package company-box
+  :straight t
+  :diminish
+  :custom
+  (company-box-scrollbar nil)
+  (company-box-show-single-candidate 'when-no-other-frontend)
+  :hook company-mode)
 
 (defun flyspell-on-for-buffer-type ()
   "Enable Flyspell appropriately for the major mode of the current buffer.  Uses `flyspell-prog-mode' for modes derived from `prog-mode', so only strings and comments get checked.  All other buffers get `flyspell-mode' to check all text.  If flyspell is already enabled, does nothing."
@@ -466,11 +494,30 @@ With \\[universal-argument] prefix: open the directory instead."
   (global-diff-hl-mode)
   )
 
-(add-hook 'text-mode-hook
-	    (lambda ()
-	      (visual-line-mode)
-	      (let ((display-line-numbers-type 'visual))
-		(display-line-numbers-mode))))
+(use-package git-modes
+  :straight t)
+
+(use-package projectile
+  :straight t
+  :ensure-system-package (fdfind . fd-find)
+  :custom
+  (projectile-project-search-path '("~/Code"))
+  (projectile-auto-discover t)
+  (projectile-known-projects-file
+   (expand-file-name-cache "projectile/known-projects.el"))
+  (projectile-cache-file
+   (expand-file-name-cache "projectile/cache.el"))
+  :config
+  (my-leader-def projectile-mode-map
+    "p" '("Projectile" . projectile-command-map))
+  (projectile-mode 1))
+
+(use-package rg
+  :straight t
+  :ensure-system-package (rg . ripgrep))
+
+(add-hook 'text-mode-hook 'visual-line-mode)
+(add-hook 'text-mode-hook 'flyspell-mode)
 
 (use-package pdf-tools
   :straight t
@@ -483,6 +530,8 @@ With \\[universal-argument] prefix: open the directory instead."
   :init
   ;; indent text according to outline structure.
   (add-hook 'org-mode-hook 'org-indent-mode)
+  (add-hook 'org-indent-mode-hook
+	    (lambda () (diminish 'org-indent-mode)))
 
   ;; Auto-tangle
   (add-hook 'org-mode-hook (lambda ()
@@ -569,6 +618,8 @@ With \\[universal-argument] prefix: open the directory instead."
 ;; Drag-and-drop to `dired`
 (add-hook 'dired-mode-hook 'org-download-enable)
 
+(straight-use-package 'htmlize)
+
 (my-leader-def org-mode-map
   "c" '("Org mode" . (keymap))
 
@@ -608,30 +659,52 @@ With \\[universal-argument] prefix: open the directory instead."
 
 (use-package auctex
   :straight t
-  :ensure-system-package (latex . texlive-full))
+  :ensure-system-package (latex . texlive-full)
+  :defer t
+  :config
+  (setq TeX-auto-save t)
+  (setq TeX-parse-self t)
+  (setq-default TeX-master nil)
 
-(setq TeX-auto-save t)
-(setq TeX-parse-self t)
-(setq-default TeX-master nil)
+  (setq preview-default-option-list '("displaymath" "textmath" "graphics"))
+  (setq preview-auto-reveal t)
 
-;; (add-hook 'LaTeX-mode-hook 'visual-line-mode)
-;; (add-hook 'LaTeX-mode-hook 'auto-fill-mode)
-(add-hook 'LaTeX-mode-hook 'flyspell-mode)
-(add-hook 'LaTeX-mode-hook 'LaTeX-math-mode)
 
-(add-hook 'LaTeX-mode-hook 'turn-on-reftex)
-(setq reftex-plug-into-AUCTeX t)
+  ;; Reftex
+  (add-hook 'LaTeX-mode-hook 'turn-on-reftex)
+  (setq reftex-plug-into-AUCTeX t)
 
-;; Use pdf-tools to open PDF files
-(setq TeX-view-program-selection '((output-pdf "PDF Tools"))
-      TeX-source-correlate-start-server t)
+  ;; Use pdf-tools to open PDF files
+  (setq TeX-view-program-selection '((output-pdf "PDF Tools"))
+        TeX-source-correlate-start-server t)
 
-;; Update PDF buffers after successful LaTeX runs
-(add-hook 'TeX-after-compilation-finished-functions
-          #'TeX-revert-document-buffer)
+  ;; Update PDF buffers after successful LaTeX runs
+  (add-hook 'TeX-after-compilation-finished-functions
+            #'TeX-revert-document-buffer)
 
-(setq preview-default-option-list '("displaymath" "textmath" "graphics"))
-(setq preview-auto-reveal t)
+  ;; Enable SyncTeX support
+  (setopt TeX-source-correlate-mode t)
+
+  ;; Setup Company backends
+  (defun setup-latex-company-backends ()
+    (require 'company-reftex)
+    (require 'company-math)
+    (setq-local company-backends
+		(append '(company-math-symbols-latex
+			  company-latex-commands
+			  company-reftex-labels
+			  company-reftex-citations)
+			company-backends)))
+
+  (add-hook 'TeX-mode-hook 'setup-latex-company-backends))
+
+(use-package company-reftex
+  :straight t
+  :defer t)
+
+(use-package company-math
+  :straight t
+  :defer t)
 
 (defun better-LaTeX-insert-item ()
   (interactive)
@@ -665,19 +738,24 @@ With \\[universal-argument] prefix: open the directory instead."
   (define-key LaTeX-mode-map (kbd "M-<return>") #'better-LaTeX-insert-item)
   )
 
+(defun tex-count-words-in-document ()
+  (interactive)
+  (let* ((master-file (expand-file-name (TeX-master-file t)))
+	 (default-directory (file-name-directory master-file))
+	 (output-buffer (generate-new-buffer "*detex-ouput*" t)))
+    (unwind-protect 
+	(with-current-buffer output-buffer
+	  (call-process "detex" master-file t)
+	  (call-interactively 'count-words))
+      (kill-buffer output-buffer))))
+
 (my-leader-def LaTeX-mode-map
   "c" '("LaTeX" . (keymap))
 
-  "c a" '("Run all commands" . TeX-command-run-all)
-  "c c" '("Command" . TeX-command-master)
-  "c e" '("Environment" . LaTeX-environment)
-  "c s" '("Section" . LaTeX-section)
-
-  "c q" '("Fill" . (keymap))
-  "c q e" '("Fill environment" . LaTeX-fill-environment)
-  "c q p" '("Fill paragraph" . LaTeX-fill-paragraph)
-  "c q r" '("Fill region" . LaTeX-fill-region)
-  "c q s" '("Fill section" . LaTeX-fill-section)
+  "c a" 'TeX-command-run-all
+  "c c" 'TeX-command-master
+  "c s" 'TeX-save-document
+  "c w" 'tex-count-words-in-document
   )
 
 (use-package markdown-mode
@@ -687,28 +765,40 @@ With \\[universal-argument] prefix: open the directory instead."
   (setq markdown-command "pandoc")
   (setq markdown-enable-math t))
 
-(add-hook 'prog-mode-hook
-	  (lambda ()
-	    (let ((display-line-numbers-type 'relative))
-	      (display-line-numbers-mode))))
+(use-package highlight-indent-guides
+  :diminish
+  :straight t
+  :hook prog-mode
+  :custom
+  (highlight-indent-guides-method 'bitmap)
+  (highlight-indent-guides-bitmap-function
+   'highlight-indent-guides--bitmap-line)
+  (highlight-indent-guides-responsive 'top)
+  (highlight-indent-guides-auto-character-face-perc 30)
+  (highlight-indent-guides-auto-top-character-face-perc 80))
 
-(my-leader-def python-mode-map
-  "c" '("Python" . (keymap))
+(use-package flycheck
+  :straight t
+  :commands flycheck-mode
+  :init
+  (add-hook 'prog-mode-hook
+	    (lambda () (when (buffer-file-name) (flycheck-mode)))))
 
-  "c i" '("Interactive shell" . run-python)
-  "c c" '("Python3 command" .
-          (lambda () (interactive)
-            (async-shell-command (concat "python3 " (read-from-minibuffer "python3 ")))))
+(use-package flycheck-posframe
+  :straight t
+  :hook flycheck-mode
+  :config
+  (flycheck-posframe-configure-pretty-defaults)
+  (setq flycheck-posframe-position 'point-window-center
+	flycheck-posframe-border-width 1
+	flycheck-posframe-border-use-error-face t))
 
-  "c p" '("Set pyenv version" . pyenv-mode-set)
-  "c P" '("Disable pyenv" . pyenv-mode-unset)
-  "c s" '("Send buffer to shell" .
-	  (lambda () (interactive)
-	    (unless (comint-check-proc (python-shell-get-buffer))
-	      (call-interactively #'run-python)
-	      (sleep-for 0.5))
-	    (call-interactively #'python-shell-send-buffer)))
-  )
+(add-hook 'prog-mode-hook 'hs-minor-mode)
+
+(use-package lsp-mode
+  :straight t
+  :hook (python-mode . lsp-deferred)
+  :commands (lsp lsp-deferred))
 
 (defun http-server () (interactive)
        (let ((dir (read-from-minibuffer "Directory: " default-directory))
@@ -719,3 +809,9 @@ With \\[universal-argument] prefix: open the directory instead."
 
 (use-package yaml-mode
   :straight t)
+
+(use-package sh-script
+  :defer t
+  :config
+  (add-hook 'sh-mode-hook (lambda () (setq-local evil-lookup-func 'woman)))
+  :ensure-system-package shellcheck)
