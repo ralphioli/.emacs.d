@@ -315,6 +315,11 @@ With \\[universal-argument] prefix: open the directory instead."
   (my-leader-def
     "SPC" '("Imenu" . counsel-imenu)
 
+    ;; LLM
+    "a" '("LLM" . (keymap))
+    "a a" 'gptel-menu
+    "a i" 'gptel
+
     ;; BUFFERS
     "b" '("Buffers" . (keymap))
     "b b" '("Switch to buffer" . counsel-switch-buffer)
@@ -523,7 +528,8 @@ With \\[universal-argument] prefix: open the directory instead."
   :straight t
   :mode ("\\.[pP][dD][fF]\\'" . pdf-view-mode)
   :config
-  (pdf-tools-install))
+  (pdf-tools-install)
+  (add-hook 'pdf-view-mode-hook 'pdf-view-roll-minor-mode))
 
 (use-package org
   :defer t
@@ -604,7 +610,13 @@ With \\[universal-argument] prefix: open the directory instead."
 	  org-export-with-statistics-cookies nil
 	  org-export-with-tags nil
 	  org-export-with-toc nil
-	  org-export-with-todo-keywords nil))
+	  org-export-with-todo-keywords nil)
+
+  ;; OrgSrc evil keymap
+  (with-eval-after-load 'org-src
+    (evil-define-key 'normal 'org-src-mode-map
+      (kbd "Z Z") 'org-edit-src-exit
+      (kbd "Z Q") 'org-edit-src-abort)))
 
 (use-package org-download
   :straight t
@@ -618,7 +630,9 @@ With \\[universal-argument] prefix: open the directory instead."
 ;; Drag-and-drop to `dired`
 (add-hook 'dired-mode-hook 'org-download-enable)
 
-(straight-use-package 'htmlize)
+(use-package htmlize
+  :straight t
+  :defer t)
 
 (my-leader-def org-mode-map
   "c" '("Org mode" . (keymap))
@@ -760,6 +774,7 @@ With \\[universal-argument] prefix: open the directory instead."
 
 (use-package markdown-mode
   :straight t
+  :ensure-system-package pandoc
   :mode ("README\\.md\\'" . gfm-mode)
   :init
   (setq markdown-command "pandoc")
@@ -815,3 +830,35 @@ With \\[universal-argument] prefix: open the directory instead."
   :config
   (add-hook 'sh-mode-hook (lambda () (setq-local evil-lookup-func 'woman)))
   :ensure-system-package shellcheck)
+
+(use-package gptel
+  :straight t
+  :defer t
+  :config
+  (setq gptel-backend (gptel-make-openai "OpenRouter"
+			:host "openrouter.ai"
+			:endpoint "/api/v1/chat/completions"
+			:stream t
+			:key #'gptel-api-key-from-auth-source
+			:models (gptel-openrouter-models))
+	gptel-model 'openrouter/free
+	gptel-default-mode 'org-mode
+	;; gptel-org-convert-response nil
+	gptel-track-media t)
+  ;; (add-hook 'gptel-post-response-functions
+  ;; 	    (lambda (beg end)
+  ;; 	      (message "BEG: %s --- END: %s" beg end)))
+  )
+
+(use-package gptel-openrouter-models
+  :straight (gptel-openrouter-models :type git :host github
+                                     :repo "skissue/gptel-openrouter-models"
+                                     :files ("openrouter-models.json" :defaults))
+  :defer t)
+
+(use-package llm-tool-collection
+  :straight (llm-tool-collection :type git :host github
+				 :repo "skissue/llm-tool-collection")
+  :after gptel
+  :config (mapcar (apply-partially #'apply #'gptel-make-tool)
+		  (llm-tool-collection-get-all)))

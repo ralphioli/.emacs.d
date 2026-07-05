@@ -506,6 +506,11 @@ Install general.el and define some global keybindings.
     (my-leader-def
       "SPC" '("Imenu" . counsel-imenu)
 
+      ;; LLM
+      "a" '("LLM" . (keymap))
+      "a a" 'gptel-menu
+      "a i" 'gptel
+
       ;; BUFFERS
       "b" '("Buffers" . (keymap))
       "b b" '("Switch to buffer" . counsel-switch-buffer)
@@ -775,7 +780,8 @@ To view PDFs inside Emacs
     :straight t
     :mode ("\\.[pP][dD][fF]\\'" . pdf-view-mode)
     :config
-    (pdf-tools-install))
+    (pdf-tools-install)
+    (add-hook 'pdf-view-mode-hook 'pdf-view-roll-minor-mode))
 #+end_src
 
 ** Org Mode
@@ -859,7 +865,13 @@ To view PDFs inside Emacs
   	  org-export-with-statistics-cookies nil
   	  org-export-with-tags nil
   	  org-export-with-toc nil
-  	  org-export-with-todo-keywords nil))
+  	  org-export-with-todo-keywords nil)
+
+    ;; OrgSrc evil keymap
+    (with-eval-after-load 'org-src
+      (evil-define-key 'normal 'org-src-mode-map
+        (kbd "Z Z") 'org-edit-src-exit
+        (kbd "Z Q") 'org-edit-src-abort)))
 #+end_src
 
 *** Org-download
@@ -882,7 +894,9 @@ For inserting images
 Needed to export source blocks to HTML
 
 #+begin_src emacs-lisp
-(straight-use-package 'htmlize)
+  (use-package htmlize
+    :straight t
+    :defer t)
 #+end_src
 
 *** General keybindings
@@ -1051,6 +1065,7 @@ Needed to export source blocks to HTML
 #+begin_src emacs-lisp
   (use-package markdown-mode
     :straight t
+    :ensure-system-package pandoc
     :mode ("README\\.md\\'" . gfm-mode)
     :init
     (setq markdown-command "pandoc")
@@ -1185,4 +1200,45 @@ Install *arduino-cli-mode* for compiling and uploading:
     :config
     (add-hook 'sh-mode-hook (lambda () (setq-local evil-lookup-func 'woman)))
     :ensure-system-package shellcheck)
+#+end_src
+* LLM Client
+** gptel
+#+begin_src emacs-lisp
+  (use-package gptel
+    :straight t
+    :defer t
+    :config
+    (setq gptel-backend (gptel-make-openai "OpenRouter"
+  			:host "openrouter.ai"
+  			:endpoint "/api/v1/chat/completions"
+  			:stream t
+  			:key #'gptel-api-key-from-auth-source
+  			:models (gptel-openrouter-models))
+  	gptel-model 'openrouter/free
+  	gptel-default-mode 'org-mode
+  	;; gptel-org-convert-response nil
+  	gptel-track-media t)
+    ;; (add-hook 'gptel-post-response-functions
+    ;; 	    (lambda (beg end)
+    ;; 	      (message "BEG: %s --- END: %s" beg end)))
+    )
+#+end_src
+** gptel-openrouter-models
+[[https://github.com/skissue/gptel-openrouter-models][GitHub - skissue/gptel-openrouter-models]]
+#+begin_src emacs-lisp
+  (use-package gptel-openrouter-models
+    :straight (gptel-openrouter-models :type git :host github
+                                       :repo "skissue/gptel-openrouter-models"
+                                       :files ("openrouter-models.json" :defaults))
+    :defer t)
+#+end_src
+** llm-tool-collection
+[[https://github.com/skissue/llm-tool-collection][GitHub - skissue/llm-tool-collection]]
+#+begin_src emacs-lisp
+  (use-package llm-tool-collection
+    :straight (llm-tool-collection :type git :host github
+  				 :repo "skissue/llm-tool-collection")
+    :after gptel
+    :config (mapcar (apply-partially #'apply #'gptel-make-tool)
+  		  (llm-tool-collection-get-all)))
 #+end_src
