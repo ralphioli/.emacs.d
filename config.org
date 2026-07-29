@@ -93,7 +93,12 @@ Source scripts:
 
 ** Setup recent files
 #+begin_src emacs-lisp
-  (setopt recentf-save-file (expand-file-name-cache "recentf.el"))
+  (setopt recentf-save-file (expand-file-name-cache "recentf.el")
+  	recentf-exclude '((lambda (f)
+  			    (file-in-directory-p
+  			     f (expand-file-name ".cache" user-emacs-directory))))
+  	recentf-max-saved-items 100)
+
   (recentf-mode)
 #+end_src
 * Helper functions
@@ -131,70 +136,31 @@ Source scripts:
         )))
 #+end_src
 
-** COMMENT SSH stuff
-Get hosts from ssh config file:
-#+begin_src emacs-lisp
-  (defun parse-ssh-config-hosts (ssh-config-file)
-    "Parse the SSH config file and return a list of hosts."
-    (let ((hosts '()))
-      (when (file-readable-p ssh-config-file)
-        (with-temp-buffer
-          (insert-file-contents ssh-config-file)
-          (goto-char (point-min))
-          (while (re-search-forward "^Host[ \t]+\\(.*\\)$" nil t)
-            (let ((host-line (match-string 1)))
-              (dolist (host (split-string host-line))
-                (unless (string-match-p "[*?]" host) ;; Ignore wildcards
-                  (push host hosts)))))))
-      (delete-dups hosts)))
-#+end_src
-
-Make an ivy menu for it:
-#+begin_src emacs-lisp
-  (defun ivy-ssh-config-hosts ()
-    "Return a selected SSH host from the SSH config file using Ivy."
-    (let* ((ssh-config-file (expand-file-name "~/.ssh/config"))
-           (hosts (parse-ssh-config-hosts ssh-config-file)))
-      (if hosts
-          (ivy-read "SSH Hosts: " hosts)
-        (user-error "No hosts found in %s" ssh-config-file))))
-#+end_src
-
-*** SSH find file
-#+begin_src emacs-lisp
-  (defun find-file-ssh ()
-    "Open a file on a remote SSH host."
-    (interactive)
-    (let* ((host (ivy-ssh-config-hosts))
-           (default-directory (concat "/ssh:" host ":")))
-      (call-interactively #'counsel-find-file)))
-#+end_src
-
-*** SSH Terminal
-#+begin_src emacs-lisp
-  (defun ssh-multi-term ()
-    (interactive)
-    (let* (
-           (host (ivy-ssh-config-hosts))
-           (multi-term-program "/bin/sh")
-           (multi-term-buffer-name (format "SSH: %s" host))
-           (term-cmd (format "ssh %s\n" host))
-           (term-buffer (multi-term))
-           )
-      (term-send-raw-string term-cmd)
-      ))
-#+end_src
-
 * Theme, UI
 ** Dracula theme
 #+begin_src emacs-lisp
   (use-package dracula-theme
     :straight t
     :config
-    (load-theme 'dracula t)
-    )
+    (load-theme 'dracula t))
 #+end_src
+** Iosevka font
+[[https://github.com/be5invis/Iosevka][GitHub - be5invis/Iosevka: Versatile typeface for code, from code. · GitHub]]
+#+begin_src emacs-lisp
+  (set-face-attribute 'default nil
+  		    :font "Iosevka SS12"
+  		    :width 'expanded)
 
+  (set-face-attribute 'fixed-pitch nil
+  		    :font "Iosevka Fixed SS12"
+  		    :width 'expanded)
+
+  (set-face-attribute 'variable-pitch nil
+  		    :font "Iosevka Etoile")
+
+  (mapc (lambda (f) (set-face-attribute f nil :width 'normal))
+        '(mode-line mode-line-inactive))
+#+end_src
 ** Diminish
 Don't show all minor modes in the mode line:
 #+begin_src emacs-lisp
@@ -238,7 +204,7 @@ Don't show all minor modes in the mode line:
     )
 #+end_src
 
-** Treemacs
+** COMMENT Treemacs
 #+begin_src emacs-lisp
   (use-package treemacs
     :straight t
@@ -395,6 +361,14 @@ Add hooks:
 #+begin_src emacs-lisp
   (setopt use-short-answers t) ;; use y/n in prompts instead of typing out yes/no
   (setq initial-scratch-message "") ;; Make scratch buffer empty by default
+  (setq-default word-wrap t) ;; Truncate: don't split in the middle of a word
+  (global-visual-wrap-prefix-mode) ;; Correctly align wrapped lines
+  ;; Remove truncation symbols
+  (setq-default fringe-indicator-alist
+    	      (mapcar (lambda (cell)
+    			(if (eq (car cell) 'truncation)
+    			    (cons 'truncation nil) cell))
+    		      fringe-indicator-alist))
 #+end_src
 
 * Keybindings, snippets, completion
@@ -489,7 +463,7 @@ Gives visual feedback
 #+end_src
 
 *** General.el
-Install general.el and define some global keybindings.
+Setup =general.el=
 #+begin_src emacs-lisp
   (use-package general
     :straight t
@@ -498,111 +472,119 @@ Install general.el and define some global keybindings.
 
     ;; set up 'SPC' as the global leader key
     (general-create-definer my-leader-def
-      :states '(normal insert visual emacs treemacs)
+      :states '(normal insert visual emacs)
       :keymaps 'override
       :prefix "SPC" ;; set leader
-      :global-prefix "C-SPC") ;; access leader in insert mode
-
-    (my-leader-def
-      "SPC" '("Imenu" . counsel-imenu)
-
-      ;; LLM
-      "a" '("LLM" . (keymap))
-      "a a" 'gptel-menu
-      "a i" 'gptel
-
-      ;; BUFFERS
-      "b" '("Buffers" . (keymap))
-      "b b" '("Switch to buffer" . counsel-switch-buffer)
-      "b i" '("Ibuffer" . ibuffer)
-      "b k" '("Kill this buffer" . kill-current-buffer)
-      "b n" '("Next buffer" . next-buffer)
-      "b o" '("Switch buffer Other window" . counsel-switch-buffer-other-window)
-      "b O" '("Switch buffer Other frame" . switch-to-buffer-other-frame)
-      "b p" '("Previous buffer" . previous-buffer)
-      "b r" '("Rename buffer" . rename-buffer)
-      "b s" '("Scratch buffer" . scratch-buffer)
-      "b x" '("Kill buffer, close window" . kill-buffer-and-window)
-
-      ;; FILES
-      "f" '("Files" . (keymap))
-      "f f" '("Find file" . counsel-find-file)
-      "f o" '("Find file Other window" . find-file-other-window)
-      "f r" '("Recent files" . counsel-recentf)
-      ;; "f s" '("Find file (SSH)" . find-file-ssh)
-      ;; Treemacs
-      "f t" '("Treemacs" . (keymap))
-      "f t a" '("Add project to workspace" . treemacs-add-project-to-workspace)
-      "f t c" '("Create workspace" . treemacs-create-workspace)
-      "f t d" '("Delete workspace" . treemacs-remove-workspace)
-      "f t e" '("Edit workspaces" . treemacs-edit-workspaces)
-      "f t r" '("Remove project from workspace" . treemacs-remove-project-from-workspace)
-      "f t s" '((lambda () (interactive)
-  		(let (treemacs-select-when-already-in-treemacs stay)
-  		  (treemacs-select-window t)))
-  	      :wk "Switch workspace")
-
-      ;; GIT
-      "g" '("Git" . (keymap))
-      "g c" '("Checkout" . magit-checkout)
-      "g g" '("Magit" . magit-status)
-      "g r" '("Revert hunk" . diff-hl-revert-hunk)
-      "g s" '("Show hunk" . diff-hl-show-hunk)
-      "g v" '("Toggle diff highlighting" . diff-hl-mode)
-
-      ;; SPELL CHECKING
-      "s" '("Spell Checking" . (keymap))
-      "s s" '("Toggle" . flyspell-toggle)
-      "s b" '("Scan Buffer" . flyspell-buffer)
-      "s d" '("Change dictionary" . ispell-change-dictionary)
-
-      ;; TERMINAL
-      ;; "t" '("Terminal" . (keymap))
-      ;; "t n" '("Next Terminal" . multi-term-next)
-      ;; "t p" '("Previous Terminal" . multi-term-prev)
-      ;; "t s" '("SSH connection" . ssh-multi-term)
-      ;; "t t" '("New Terminal" . multi-term)
-
-      ;; VIEW
-      ;; "v" '("View" . (keymap))
-      ;; "v g" '("Git Diff Highlighting" . diff-hl-mode)
-      ;; "v l" '("Line numbers" . display-line-numbers-mode)
-      ;; "v t" '("Truncate lines" . toggle-truncate-lines)
-      ;; "v v" '("Visual line mode" . visual-line-mode)
-
-      ;; WINDOWS
-      "w" '("Windows" . (keymap))
-      ;; Window splits
-      "w c" '("Close window" . evil-window-delete)
-      "w n" '("New window" . evil-window-new)
-      "w s" '("Horizontal split window" . evil-window-split)
-      "w v" '("Vertical split window" . evil-window-vsplit)
-      "w x" '("Kill buffer, close window" . kill-buffer-and-window)
-      ;; Window motions
-      "w h" '("Window left" . evil-window-left)
-      "w j" '("Window down" . evil-window-down)
-      "w k" '("Window up" . evil-window-up)
-      "w l" '("Window right" . evil-window-right)
-      "w w" '("Goto next window" . evil-window-next)
-      "w W" '("Goto previous window" . evil-window-prev)
-      ;; Move Windows
-      ;; "w H" '("Buffer move left" . buf-move-left)
-      ;; "w J" '("Buffer move down" . buf-move-down)
-      ;; "w K" '("Buffer move up" . buf-move-up)
-      ;; "w L" '("Buffer move right" . buf-move-right)
-
-      ;; COMMAND
-      "x" '("Command" . (keymap))
-      "x x" '("Run Command" . counsel-M-x)
-      "x h" '("Command History" . counsel-command-history)
-      "x o" 'xdg-open
-
-      "y" '("Yasnippet" . (keymap))
-      "y s" 'yas-insert-snippet
-      "y n" 'yas-new-snippet
-      "y f" 'yas-visit-snippet-file
-      ))
+      :global-prefix "C-SPC")) ;; access leader in insert mode
 #+end_src
+
+**** Global keybindings
+#+begin_src emacs-lisp
+  (my-leader-def
+    "SPC" '("Imenu/Outline" . (lambda () (interactive)
+  			      (if (derived-mode-p 'text-mode)
+  				  (call-interactively 'counsel-outline)
+  				(call-interactively 'counsel-imenu))))
+
+    ;; BUFFERS
+    "b" '("Buffers" . (keymap))
+    "b b" '("Switch to buffer" . counsel-switch-buffer)
+    "b i" '("Ibuffer" . ibuffer)
+    "b k" '("Kill this buffer" . kill-current-buffer)
+    "b n" '("Next buffer" . next-buffer)
+    "b o" '("Switch buffer Other window" . counsel-switch-buffer-other-window)
+    "b O" '("Switch buffer Other frame" . switch-to-buffer-other-frame)
+    "b p" '("Previous buffer" . previous-buffer)
+    "b r" '("Rename buffer" . rename-buffer)
+    "b s" '("Scratch buffer" . scratch-buffer)
+    "b x" '("Kill buffer, close window" . kill-buffer-and-window)
+
+    ;; FILES
+    "f" '("Files" . (keymap))
+    "f f" '("Find file" . counsel-find-file)
+    "f o" '("Find file Other window" . find-file-other-window)
+    "f r" '("Recent files" . counsel-recentf)
+    ;; "f s" '("Find file (SSH)" . find-file-ssh)
+    ;; Treemacs
+    ;; "f t" '("Treemacs" . (keymap))
+    ;; "f t a" '("Add project to workspace" . treemacs-add-project-to-workspace)
+    ;; "f t c" '("Create workspace" . treemacs-create-workspace)
+    ;; "f t d" '("Delete workspace" . treemacs-remove-workspace)
+    ;; "f t e" '("Edit workspaces" . treemacs-edit-workspaces)
+    ;; "f t r" '("Remove project from workspace" . treemacs-remove-project-from-workspace)
+    ;; "f t s" '((lambda () (interactive)
+    	      ;; (let (treemacs-select-when-already-in-treemacs stay)
+    		;; (treemacs-select-window t)))
+    	    ;; :wk "Switch workspace")
+
+    ;; GIT
+    "g" '("Git" . (keymap))
+    "g c" '("Checkout" . magit-checkout)
+    "g g" '("Magit" . magit-status)
+    "g r" '("Revert hunk" . diff-hl-revert-hunk)
+    "g s" '("Show hunk" . diff-hl-show-hunk)
+    "g v" '("Toggle diff highlighting" . diff-hl-mode)
+
+    ;; SPELL CHECKING
+    "s" '("Spell Checking" . (keymap))
+    "s s" '("Toggle" . flyspell-toggle)
+    "s b" '("Scan Buffer" . flyspell-buffer)
+    "s d" '("Change dictionary" . ispell-change-dictionary)
+
+    ;; VIEW
+    ;; "v" '("View" . (keymap))
+    ;; "v g" '("Git Diff Highlighting" . diff-hl-mode)
+    ;; "v l" '("Line numbers" . display-line-numbers-mode)
+    ;; "v t" '("Truncate lines" . toggle-truncate-lines)
+    ;; "v v" '("Visual line mode" . visual-line-mode)
+
+    ;; WINDOWS
+    "w" '("Windows" . (keymap))
+    ;; Window splits
+    "w c" '("Close window" . evil-window-delete)
+    "w n" '("New window" . evil-window-new)
+    "w s" '("Horizontal split window" . evil-window-split)
+    "w v" '("Vertical split window" . evil-window-vsplit)
+    "w x" '("Kill buffer, close window" . kill-buffer-and-window)
+    ;; Window motions
+    "w h" '("Window left" . evil-window-left)
+    "w j" '("Window down" . evil-window-down)
+    "w k" '("Window up" . evil-window-up)
+    "w l" '("Window right" . evil-window-right)
+    "w w" '("Goto next window" . evil-window-next)
+    "w W" '("Goto previous window" . evil-window-prev)
+    "w r" '("Rotate windows (down)" . evil-window-rotate-downwards)
+    "w R" '("Rotate windows (up)" . evil-window-rotate-upwards)
+
+    ;; COMMAND
+    "x" '("Command" . (keymap))
+    "x x" '("Run Command" . counsel-M-x)
+    "x h" '("Command History" . counsel-command-history)
+    "x o" 'xdg-open
+
+    "y" '("Yasnippet" . (keymap))
+    "y y" '("Insert snippet" . yas-insert-snippet)
+    "y n" '("New snippet" . yas-new-snippet)
+    "y e" '("Edit snippet" . yas-visit-snippet-file)
+    )
+#+end_src
+**** Keybindings overview
++ =a=: LLM
++ =b=: Buffers
++ =c=: Major mode
+  - [[id:c7243462-0aaa-4001-ad78-82363d488b22][Org Mode]]
+  - [[id:111c1d8b-981f-478b-b89a-6f4cd43a55dd][LaTeX]]
++ =f=: Files
+  - =f t=: Treemacs
++ =g=: Git
++ =p=: [[id:f7262e55-40bc-4c5d-b3d5-e64b49e18cab][Projectile]]
++ =s=: Spell checking
++ =t=: [[id:1500c29c-f2ed-4f2f-9679-d1883d2c1870][Terminal]]
++ =w=: Windows
++ =x=: Command
++ =y=: Yasnippet
++ =SPC=: imenu/outline
+  
 *** Misc. keybindings
 + =Ctrl+Shift+N=: New frame
 + =Ctrl+Shift+W=: Close frame
@@ -642,6 +624,7 @@ Use =ESC= instead of =Ctrl-G=:
     :straight t
     :diminish yas-minor-mode
     :config (yas-reload-all)
+    (setopt yas-wrap-around-region t)
     :hook
     ((text-mode . yas-minor-mode)
      (prog-mode . yas-minor-mode)))
@@ -702,6 +685,100 @@ Use =ESC= instead of =Ctrl-G=:
       (flyspell-on-for-buffer-type)))
 #+end_src
 
+* Terminal
+** Ghostel
+#+begin_src emacs-lisp
+  (use-package ghostel
+    :straight t
+    :defer t
+    :config
+    (setopt ghostel-module-auto-install 'download)
+    (add-hook 'ghostel-mode-hook (lambda () (setq-local evil-lookup-func 'woman))))
+#+end_src
+** Ghostel extensions
+Make =eshell-visual-commands= run in a Ghostel buffer.
+#+begin_src emacs-lisp
+(use-package ghostel-eshell
+  :hook (eshell-load . ghostel-eshell-visual-command-mode))
+#+end_src
+
+Replace comint's built-in =ansi-color-process-output= with Ghostel's VT parser.
+#+begin_src emacs-lisp
+(use-package ghostel-comint
+  :hook (after-init . ghostel-comint-global-mode))
+#+end_src
+** Ghostel evil integration
+#+begin_src emacs-lisp
+  (use-package evil-ghostel
+    :straight t
+    :after (ghostel evil)
+    :hook (ghostel-mode . evil-ghostel-mode))
+#+end_src
+** Keybindings
+:PROPERTIES:
+:ID:       1500c29c-f2ed-4f2f-9679-d1883d2c1870
+:END:
+#+begin_src emacs-lisp
+  (my-leader-def
+    "t" '("Terminal" . (keymap))
+    "t t" 'ghostel
+    "t b" 'ghostel-list-buffers
+    )
+#+end_src
+** COMMENT SSH stuff
+Get hosts from ssh config file:
+#+begin_src emacs-lisp
+  (defun parse-ssh-config-hosts (ssh-config-file)
+    "Parse the SSH config file and return a list of hosts."
+    (let ((hosts '()))
+      (when (file-readable-p ssh-config-file)
+        (with-temp-buffer
+          (insert-file-contents ssh-config-file)
+          (goto-char (point-min))
+          (while (re-search-forward "^Host[ \t]+\\(.*\\)$" nil t)
+            (let ((host-line (match-string 1)))
+              (dolist (host (split-string host-line))
+                (unless (string-match-p "[*?]" host) ;; Ignore wildcards
+                  (push host hosts)))))))
+      (delete-dups hosts)))
+#+end_src
+
+Make an ivy menu for it:
+#+begin_src emacs-lisp
+  (defun ivy-ssh-config-hosts ()
+    "Return a selected SSH host from the SSH config file using Ivy."
+    (let* ((ssh-config-file (expand-file-name "~/.ssh/config"))
+           (hosts (parse-ssh-config-hosts ssh-config-file)))
+      (if hosts
+          (ivy-read "SSH Hosts: " hosts)
+        (user-error "No hosts found in %s" ssh-config-file))))
+#+end_src
+
+*** SSH find file
+#+begin_src emacs-lisp
+  (defun find-file-ssh ()
+    "Open a file on a remote SSH host."
+    (interactive)
+    (let* ((host (ivy-ssh-config-hosts))
+           (default-directory (concat "/ssh:" host ":")))
+      (call-interactively #'counsel-find-file)))
+#+end_src
+
+*** SSH Terminal
+#+begin_src emacs-lisp
+  (defun ssh-multi-term ()
+    (interactive)
+    (let* (
+           (host (ivy-ssh-config-hosts))
+           (multi-term-program "/bin/sh")
+           (multi-term-buffer-name (format "SSH: %s" host))
+           (term-cmd (format "ssh %s\n" host))
+           (term-buffer (multi-term))
+           )
+      (term-send-raw-string term-cmd)
+      ))
+#+end_src
+
 * Version control, Projects
 ** Git
 *** magit
@@ -733,6 +810,9 @@ Syntax highlighting for =.gitignore= etc.
 #+end_src
 
 ** Projectile
+:PROPERTIES:
+:ID:       f7262e55-40bc-4c5d-b3d5-e64b49e18cab
+:END:
 #+begin_src emacs-lisp
   (use-package projectile
     :straight t
@@ -761,16 +841,16 @@ Syntax highlighting for =.gitignore= etc.
 ** General
 *** Auto-enable minor modes
 #+begin_src emacs-lisp
-(add-hook 'text-mode-hook 'visual-line-mode)
-(add-hook 'text-mode-hook 'flyspell-mode)
+  (add-hook 'text-mode-hook 'visual-line-mode)
+  (add-hook 'text-mode-hook 'flyspell-mode)
 #+end_src
 
-*** COMMENT Mixed pitch mode
+*** Mixed pitch mode
 #+begin_src emacs-lisp
   (use-package mixed-pitch
     :straight t
     :diminish
-    :hook (text-mode . mixed-pitch-mode))
+    :hook text-mode)
 #+end_src
 
 *** PDF Tools
@@ -787,12 +867,17 @@ To view PDFs inside Emacs
 ** Org Mode
 #+begin_src emacs-lisp
   (use-package org
+    :straight t
     :defer t
     :init
     ;; indent text according to outline structure.
-    (add-hook 'org-mode-hook 'org-indent-mode)
+    (add-hook 'org-mode-hook 'org-indent-mode -90)
     (add-hook 'org-indent-mode-hook
   	    (lambda () (diminish 'org-indent-mode)))
+
+    ;; Disable visual-wrap-prefix-mode (clashes with org-modern)
+    (add-hook 'org-mode-hook (lambda ()
+  			     (visual-wrap-prefix-mode -1)) -90)
 
     ;; Auto-tangle
     (add-hook 'org-mode-hook (lambda ()
@@ -807,9 +892,10 @@ To view PDFs inside Emacs
   	  org-hide-emphasis-markers t
   	  org-image-actual-width 400
   	  org-return-follows-link t
-  	  org-imenu-depth 3
+  	  org-imenu-depth 8
+  	  org-ellipsis "…"
   	  org-highlight-latex-and-related '(latex script entities)
-  	  org-format-latex-options (plist-put org-format-latex-options :scale 1.5))
+  	  org-format-latex-options (plist-put org-format-latex-options :scale 1.0))
 
     ;; Default apps for opening attachments, links, etc.
     (setopt org-file-apps
@@ -819,6 +905,10 @@ To view PDFs inside Emacs
               ("\\.x?html?\\'" . system)
   	    (t . system)
   	    (system . (lambda (path _) (xdg-open path)))))
+
+    ;; Todo settings
+    (setopt org-fontify-done-headline nil
+  	  org-todo-keywords '((sequence "TODO" "WAIT" "|" "DONE" "CANCEL")))
 
     ;; Fix <return> commands
     (advice-add 'org-insert-heading :before (lambda (&rest _) (evil-insert 1)))
@@ -868,13 +958,14 @@ To view PDFs inside Emacs
   	  org-export-with-todo-keywords nil)
 
     ;; OrgSrc evil keymap
-    (with-eval-after-load 'org-src
-      (evil-define-key 'normal 'org-src-mode-map
-        (kbd "Z Z") 'org-edit-src-exit
-        (kbd "Z Q") 'org-edit-src-abort)))
+    ;; (with-eval-after-load 'org-src
+    ;;   (evil-define-key 'normal org-src-mode-map
+    ;;     "ZZ" 'org-edit-src-exit
+    ;;     "ZQ" 'org-edit-src-abort))
+    )
 #+end_src
 
-*** Org-download
+*** =org-download=
 For inserting images
 #+begin_src emacs-lisp
   (use-package org-download
@@ -883,14 +974,50 @@ For inserting images
     :custom
     (org-download-method 'directory)
     (org-download-image-dir "./org-images")
-    (org-download-heading-lvl nil)
-    )
+    (org-download-heading-lvl nil))
 
   ;; Drag-and-drop to `dired`
-  (add-hook 'dired-mode-hook 'org-download-enable)
+  ;; (add-hook 'dired-mode-hook 'org-download-enable)
 #+end_src
 
-*** htmlize.el
+*** =org-modern=
+#+begin_src emacs-lisp
+  (use-package org-modern
+    :straight t
+    :hook org-mode
+    :config
+    ;; Todo
+    (setopt org-modern-todo-faces '(("TODO" :background "#FF5555" :foreground "#282A36")
+  				  ("WAIT" :background "#FFB86C" :foreground "#282A36")
+  				  ("DONE" :background "#50FA7B" :foreground "#282A36")
+  				  ("CANCEL" :background "#6272A4" :foreground "#F8F8F2")))
+
+    ;; Priority
+    (setopt org-modern-priority-faces '((?A :background "#FF5555" :foreground "#282A36")
+  				      (?B :background "#FFB86C" :foreground "#282A36")
+  				      (?C :background "#F1FA8C" :foreground "#282A36")))
+
+    ;; Tags
+    (set-face-background 'org-modern-tag "#8BE9FD")
+    (set-face-foreground 'org-modern-tag "#282A36")
+
+    ;; Progress
+    (setopt org-modern-progress 8)
+    (set-face-background 'org-modern-progress-incomplete "#6272A4")
+    (set-face-foreground 'org-modern-progress-incomplete "#F8F8F2")
+    (set-face-background 'org-modern-progress-complete "#50FA7B")
+    (set-face-foreground 'org-modern-progress-complete "#282A36"))
+#+end_src
+
+*** =org-modern-indent=
+#+begin_src emacs-lisp
+  (use-package org-modern-indent
+    :straight
+    (org-modern-indent :type git :host github :repo "jdtsmith/org-modern-indent")
+    :hook org-mode)
+#+end_src
+
+*** COMMENT =htmlize.el=
 Needed to export source blocks to HTML
 
 #+begin_src emacs-lisp
@@ -900,6 +1027,9 @@ Needed to export source blocks to HTML
 #+end_src
 
 *** General keybindings
+:PROPERTIES:
+:ID:       c7243462-0aaa-4001-ad78-82363d488b22
+:END:
 #+begin_src emacs-lisp
   (my-leader-def org-mode-map
     "c" '("Org mode" . (keymap))
@@ -983,6 +1113,13 @@ Needed to export source blocks to HTML
     (add-hook 'TeX-mode-hook 'setup-latex-company-backends))
 #+end_src
 
+*** Bibtex
+#+begin_src emacs-lisp
+  (use-package bibtex
+    :defer t
+    :config
+    (add-hook 'bibtex-mode-hook 'auto-revert-mode))
+#+end_src
 *** Company backends
 #+begin_src emacs-lisp
   (use-package company-reftex
@@ -1050,6 +1187,9 @@ Needed to export source blocks to HTML
 #+end_src
 
 *** Keybindings
+:PROPERTIES:
+:ID:       111c1d8b-981f-478b-b89a-6f4cd43a55dd
+:END:
 #+begin_src emacs-lisp
   (my-leader-def LaTeX-mode-map
     "c" '("LaTeX" . (keymap))
@@ -1068,8 +1208,31 @@ Needed to export source blocks to HTML
     :ensure-system-package pandoc
     :mode ("README\\.md\\'" . gfm-mode)
     :init
-    (setq markdown-command "pandoc")
-    (setq markdown-enable-math t))
+    (setq markdown-command "pandoc"
+  	markdown-enable-math t
+  	markdown-hide-markup t))
+#+end_src
+
+*** Edit indirect
+#+begin_src emacs-lisp
+  (use-package edit-indirect
+    :straight t
+    :defer t)
+#+end_src
+
+*** Keybindings
+#+begin_src emacs-lisp
+  (my-leader-def markdown-mode-map
+    "c" '("Markdown" . (keymap))
+
+    ;; Links and images
+    "c i" 'markdown-insert-image
+    "c l" 'markdown-insert-link
+
+    ;; Remap
+    "c c" `("Command" . ,(keymap-lookup markdown-mode-map "C-c C-c"))
+    "c s" `("Styling" . ,(keymap-lookup markdown-mode-map "C-c C-s"))
+    "c x" `("Toggle" . ,(keymap-lookup markdown-mode-map "C-c C-x")))
 #+end_src
 
 * Programming
@@ -1201,8 +1364,9 @@ Install *arduino-cli-mode* for compiling and uploading:
     (add-hook 'sh-mode-hook (lambda () (setq-local evil-lookup-func 'woman)))
     :ensure-system-package shellcheck)
 #+end_src
-* LLM Client
-** gptel
+* LLMs/Agents
+** Gptel
+*** =gptel=
 #+begin_src emacs-lisp
   (use-package gptel
     :straight t
@@ -1223,7 +1387,7 @@ Install *arduino-cli-mode* for compiling and uploading:
     ;; 	      (message "BEG: %s --- END: %s" beg end)))
     )
 #+end_src
-** gptel-openrouter-models
+*** =gptel-openrouter-models=
 [[https://github.com/skissue/gptel-openrouter-models][GitHub - skissue/gptel-openrouter-models]]
 #+begin_src emacs-lisp
   (use-package gptel-openrouter-models
@@ -1232,7 +1396,7 @@ Install *arduino-cli-mode* for compiling and uploading:
                                        :files ("openrouter-models.json" :defaults))
     :defer t)
 #+end_src
-** llm-tool-collection
+*** =llm-tool-collection=
 [[https://github.com/skissue/llm-tool-collection][GitHub - skissue/llm-tool-collection]]
 #+begin_src emacs-lisp
   (use-package llm-tool-collection
@@ -1241,4 +1405,30 @@ Install *arduino-cli-mode* for compiling and uploading:
     :after gptel
     :config (mapcar (apply-partially #'apply #'gptel-make-tool)
   		  (llm-tool-collection-get-all)))
+#+end_src
+** Opencode
+#+begin_src emacs-lisp
+  (defun opencode ()
+    (interactive)
+    (let* ((default-directory (or (projectile-project-root)
+  				(projectile-completing-read "Select project: "
+  							    projectile-known-projects)))
+  	 (cmd (or (executable-find "opencode")
+  		  (error "OpenCode not found")))
+  	 (buf-name (concat "*OpenCode: " (projectile-project-name) "*"))
+  	 (buf-exists (get-buffer buf-name)))
+      (switch-to-buffer-other-window buf-name)
+      (unless buf-exists
+        (ghostel-exec (get-buffer buf-name) cmd)
+        (setq-local ghostel-buffer-name-function nil)
+        (evil-local-set-key 'insert (kbd "C-x") 'ghostel--send-event))))
+#+end_src
+** Keybindings
+#+begin_src emacs-lisp
+  (my-leader-def
+    "a" '("LLM" . (keymap))
+    "a a" 'gptel-menu
+    "a i" 'gptel
+    "a o" '("OpenCode" . opencode)
+    )
 #+end_src

@@ -38,7 +38,12 @@
 (when (file-exists-p custom-file)
   (load custom-file))
 
-(setopt recentf-save-file (expand-file-name-cache "recentf.el"))
+(setopt recentf-save-file (expand-file-name-cache "recentf.el")
+	recentf-exclude '((lambda (f)
+			    (file-in-directory-p
+			     f (expand-file-name ".cache" user-emacs-directory))))
+	recentf-max-saved-items 100)
+
 (recentf-mode)
 
 (defun xdg-open (&optional path)
@@ -69,8 +74,21 @@ With \\[universal-argument] prefix: open the directory instead."
 (use-package dracula-theme
   :straight t
   :config
-  (load-theme 'dracula t)
-  )
+  (load-theme 'dracula t))
+
+(set-face-attribute 'default nil
+		    :font "Iosevka SS12"
+		    :width 'expanded)
+
+(set-face-attribute 'fixed-pitch nil
+		    :font "Iosevka Fixed SS12"
+		    :width 'expanded)
+
+(set-face-attribute 'variable-pitch nil
+		    :font "Iosevka Etoile")
+
+(mapc (lambda (f) (set-face-attribute f nil :width 'normal))
+      '(mode-line mode-line-inactive))
 
 (use-package diminish :straight t)
 
@@ -99,122 +117,6 @@ With \\[universal-argument] prefix: open the directory instead."
   (ivy-rich-mode 1)
   )
 
-(use-package treemacs
-  :straight t
-  :defer t
-  :config
-  (progn
-    (setq treemacs-collapse-dirs                   (if treemacs-python-executable 3 0)
-	    treemacs-deferred-git-apply-delay        0.5
-	    treemacs-directory-name-transformer      #'identity
-	    treemacs-display-in-side-window          t
-	    treemacs-eldoc-display                   'simple
-	    treemacs-file-event-delay                2000
-	    treemacs-file-extension-regex            treemacs-last-period-regex-value
-	    treemacs-file-follow-delay               0.2
-	    treemacs-file-name-transformer           #'identity
-	    treemacs-follow-after-init               t
-	    treemacs-expand-after-init               t
-	    treemacs-find-workspace-method           'find-for-file-or-pick-first
-	    treemacs-git-command-pipe                ""
-	    treemacs-goto-tag-strategy               'refetch-index
-	    treemacs-header-scroll-indicators        '(nil . "^^^^^^")
-	    treemacs-hide-dot-git-directory          t
-	    treemacs-indentation                     2
-	    treemacs-indentation-string              " "
-	    treemacs-is-never-other-window           t
-	    treemacs-max-git-entries                 5000
-	    treemacs-missing-project-action          'ask
-	    treemacs-move-files-by-mouse-dragging    t
-	    treemacs-move-forward-on-expand          nil
-	    treemacs-no-png-images                   nil
-	    treemacs-no-delete-other-windows         t
-	    treemacs-project-follow-cleanup          nil
-	    treemacs-persist-file                    (expand-file-name ".cache/treemacs-persist" user-emacs-directory)
-	    treemacs-position                        'left
-	    treemacs-read-string-input               'from-child-frame
-	    treemacs-recenter-distance               0.1
-	    treemacs-recenter-after-file-follow      nil
-	    treemacs-recenter-after-tag-follow       nil
-	    treemacs-recenter-after-project-jump     'always
-	    treemacs-recenter-after-project-expand   'on-distance
-	    treemacs-litter-directories              '("/node_modules" "/.venv" "/.cask")
-	    treemacs-project-follow-into-home        nil
-	    treemacs-show-cursor                     nil
-	    treemacs-show-hidden-files               t
-	    treemacs-silent-filewatch                nil
-	    treemacs-silent-refresh                  nil
-	    treemacs-sorting                         'alphabetic-asc
-	    treemacs-select-when-already-in-treemacs 'move-back
-	    treemacs-space-between-root-nodes        t
-	    treemacs-tag-follow-cleanup              t
-	    treemacs-tag-follow-delay                1.5
-	    treemacs-text-scale                      nil
-	    treemacs-user-mode-line-format           nil
-	    treemacs-user-header-line-format         nil
-	    treemacs-wide-toggle-width               70
-	    treemacs-width                           35
-	    treemacs-width-increment                 1
-	    treemacs-width-is-initially-locked       t
-	    treemacs-workspace-switch-cleanup        nil)
-
-    ;; The default width and height of the icons is 22 pixels. If you are
-    ;; using a Hi-DPI display, uncomment this to double the icon size.
-    ;;(treemacs-resize-icons 44)
-
-    (treemacs-follow-mode t)
-    (treemacs-filewatch-mode t)
-    (treemacs-fringe-indicator-mode 'always)
-    (when treemacs-python-executable
-	(treemacs-git-commit-diff-mode t))
-
-    (pcase (cons (not (null (executable-find "git")))
-		   (not (null treemacs-python-executable)))
-	(`(t . t)
-	 (treemacs-git-mode 'deferred))
-	(`(t . _)
-	 (treemacs-git-mode 'simple)))
-
-    (treemacs-hide-gitignored-files-mode -1))
-  :bind
-  (:map global-map
-	  ("C-/"       . treemacs-select-window)
-	  ;; ("C-x t 1"   . treemacs-delete-other-windows)
-	  ("<f1>"   . treemacs)
-	  ;; ("C-x t d"   . treemacs-select-directory)
-	  ;; ("C-x t B"   . treemacs-bookmark)
-	  ;; ("C-x t C-t" . treemacs-find-file)
-	  ;; ("C-x t M-t" . treemacs-find-tag)
-	  ))
-
-(use-package treemacs-evil
-  :after (treemacs evil)
-  :straight t)
-
-(use-package treemacs-projectile
-  :after (treemacs projectile)
-  :straight t)
-
-(use-package treemacs-icons-dired
-  :hook (dired-mode . treemacs-icons-dired-enable-once)
-  :straight t)
-
-(use-package treemacs-magit
-  :after (treemacs magit)
-  :straight t)
-
-;; (use-package treemacs-persp ;;treemacs-perspective if you use perspective.el vs. persp-mode
-;;   :after (treemacs persp-mode) ;;or perspective vs. persp-mode
-;;   :straight t
-;;   :config (treemacs-set-scope-type 'Perspectives))
-
-;; (use-package treemacs-tab-bar ;;treemacs-tab-bar if you use tab-bar-mode
-;;   :after (treemacs)
-;;   :straight t
-;;   :config (treemacs-set-scope-type 'Tabs))
-
-(treemacs-start-on-boot)
-
 (setopt display-line-numbers-width-start t)
 
 (defun enable-line-numbering ()
@@ -231,6 +133,14 @@ With \\[universal-argument] prefix: open the directory instead."
 
 (setopt use-short-answers t) ;; use y/n in prompts instead of typing out yes/no
 (setq initial-scratch-message "") ;; Make scratch buffer empty by default
+(setq-default word-wrap t) ;; Truncate: don't split in the middle of a word
+(global-visual-wrap-prefix-mode) ;; Correctly align wrapped lines
+;; Remove truncation symbols
+(setq-default fringe-indicator-alist
+  	      (mapcar (lambda (cell)
+  			(if (eq (car cell) 'truncation)
+  			    (cons 'truncation nil) cell))
+  		      fringe-indicator-alist))
 
 (use-package evil
   :straight t
@@ -307,110 +217,98 @@ With \\[universal-argument] prefix: open the directory instead."
 
   ;; set up 'SPC' as the global leader key
   (general-create-definer my-leader-def
-    :states '(normal insert visual emacs treemacs)
+    :states '(normal insert visual emacs)
     :keymaps 'override
     :prefix "SPC" ;; set leader
-    :global-prefix "C-SPC") ;; access leader in insert mode
+    :global-prefix "C-SPC")) ;; access leader in insert mode
 
-  (my-leader-def
-    "SPC" '("Imenu" . counsel-imenu)
+(my-leader-def
+  "SPC" '("Imenu/Outline" . (lambda () (interactive)
+			      (if (derived-mode-p 'text-mode)
+				  (call-interactively 'counsel-outline)
+				(call-interactively 'counsel-imenu))))
 
-    ;; LLM
-    "a" '("LLM" . (keymap))
-    "a a" 'gptel-menu
-    "a i" 'gptel
+  ;; BUFFERS
+  "b" '("Buffers" . (keymap))
+  "b b" '("Switch to buffer" . counsel-switch-buffer)
+  "b i" '("Ibuffer" . ibuffer)
+  "b k" '("Kill this buffer" . kill-current-buffer)
+  "b n" '("Next buffer" . next-buffer)
+  "b o" '("Switch buffer Other window" . counsel-switch-buffer-other-window)
+  "b O" '("Switch buffer Other frame" . switch-to-buffer-other-frame)
+  "b p" '("Previous buffer" . previous-buffer)
+  "b r" '("Rename buffer" . rename-buffer)
+  "b s" '("Scratch buffer" . scratch-buffer)
+  "b x" '("Kill buffer, close window" . kill-buffer-and-window)
 
-    ;; BUFFERS
-    "b" '("Buffers" . (keymap))
-    "b b" '("Switch to buffer" . counsel-switch-buffer)
-    "b i" '("Ibuffer" . ibuffer)
-    "b k" '("Kill this buffer" . kill-current-buffer)
-    "b n" '("Next buffer" . next-buffer)
-    "b o" '("Switch buffer Other window" . counsel-switch-buffer-other-window)
-    "b O" '("Switch buffer Other frame" . switch-to-buffer-other-frame)
-    "b p" '("Previous buffer" . previous-buffer)
-    "b r" '("Rename buffer" . rename-buffer)
-    "b s" '("Scratch buffer" . scratch-buffer)
-    "b x" '("Kill buffer, close window" . kill-buffer-and-window)
+  ;; FILES
+  "f" '("Files" . (keymap))
+  "f f" '("Find file" . counsel-find-file)
+  "f o" '("Find file Other window" . find-file-other-window)
+  "f r" '("Recent files" . counsel-recentf)
+  ;; "f s" '("Find file (SSH)" . find-file-ssh)
+  ;; Treemacs
+  ;; "f t" '("Treemacs" . (keymap))
+  ;; "f t a" '("Add project to workspace" . treemacs-add-project-to-workspace)
+  ;; "f t c" '("Create workspace" . treemacs-create-workspace)
+  ;; "f t d" '("Delete workspace" . treemacs-remove-workspace)
+  ;; "f t e" '("Edit workspaces" . treemacs-edit-workspaces)
+  ;; "f t r" '("Remove project from workspace" . treemacs-remove-project-from-workspace)
+  ;; "f t s" '((lambda () (interactive)
+  	      ;; (let (treemacs-select-when-already-in-treemacs stay)
+  		;; (treemacs-select-window t)))
+  	    ;; :wk "Switch workspace")
 
-    ;; FILES
-    "f" '("Files" . (keymap))
-    "f f" '("Find file" . counsel-find-file)
-    "f o" '("Find file Other window" . find-file-other-window)
-    "f r" '("Recent files" . counsel-recentf)
-    ;; "f s" '("Find file (SSH)" . find-file-ssh)
-    ;; Treemacs
-    "f t" '("Treemacs" . (keymap))
-    "f t a" '("Add project to workspace" . treemacs-add-project-to-workspace)
-    "f t c" '("Create workspace" . treemacs-create-workspace)
-    "f t d" '("Delete workspace" . treemacs-remove-workspace)
-    "f t e" '("Edit workspaces" . treemacs-edit-workspaces)
-    "f t r" '("Remove project from workspace" . treemacs-remove-project-from-workspace)
-    "f t s" '((lambda () (interactive)
-		(let (treemacs-select-when-already-in-treemacs stay)
-		  (treemacs-select-window t)))
-	      :wk "Switch workspace")
+  ;; GIT
+  "g" '("Git" . (keymap))
+  "g c" '("Checkout" . magit-checkout)
+  "g g" '("Magit" . magit-status)
+  "g r" '("Revert hunk" . diff-hl-revert-hunk)
+  "g s" '("Show hunk" . diff-hl-show-hunk)
+  "g v" '("Toggle diff highlighting" . diff-hl-mode)
 
-    ;; GIT
-    "g" '("Git" . (keymap))
-    "g c" '("Checkout" . magit-checkout)
-    "g g" '("Magit" . magit-status)
-    "g r" '("Revert hunk" . diff-hl-revert-hunk)
-    "g s" '("Show hunk" . diff-hl-show-hunk)
-    "g v" '("Toggle diff highlighting" . diff-hl-mode)
+  ;; SPELL CHECKING
+  "s" '("Spell Checking" . (keymap))
+  "s s" '("Toggle" . flyspell-toggle)
+  "s b" '("Scan Buffer" . flyspell-buffer)
+  "s d" '("Change dictionary" . ispell-change-dictionary)
 
-    ;; SPELL CHECKING
-    "s" '("Spell Checking" . (keymap))
-    "s s" '("Toggle" . flyspell-toggle)
-    "s b" '("Scan Buffer" . flyspell-buffer)
-    "s d" '("Change dictionary" . ispell-change-dictionary)
+  ;; VIEW
+  ;; "v" '("View" . (keymap))
+  ;; "v g" '("Git Diff Highlighting" . diff-hl-mode)
+  ;; "v l" '("Line numbers" . display-line-numbers-mode)
+  ;; "v t" '("Truncate lines" . toggle-truncate-lines)
+  ;; "v v" '("Visual line mode" . visual-line-mode)
 
-    ;; TERMINAL
-    ;; "t" '("Terminal" . (keymap))
-    ;; "t n" '("Next Terminal" . multi-term-next)
-    ;; "t p" '("Previous Terminal" . multi-term-prev)
-    ;; "t s" '("SSH connection" . ssh-multi-term)
-    ;; "t t" '("New Terminal" . multi-term)
+  ;; WINDOWS
+  "w" '("Windows" . (keymap))
+  ;; Window splits
+  "w c" '("Close window" . evil-window-delete)
+  "w n" '("New window" . evil-window-new)
+  "w s" '("Horizontal split window" . evil-window-split)
+  "w v" '("Vertical split window" . evil-window-vsplit)
+  "w x" '("Kill buffer, close window" . kill-buffer-and-window)
+  ;; Window motions
+  "w h" '("Window left" . evil-window-left)
+  "w j" '("Window down" . evil-window-down)
+  "w k" '("Window up" . evil-window-up)
+  "w l" '("Window right" . evil-window-right)
+  "w w" '("Goto next window" . evil-window-next)
+  "w W" '("Goto previous window" . evil-window-prev)
+  "w r" '("Rotate windows (down)" . evil-window-rotate-downwards)
+  "w R" '("Rotate windows (up)" . evil-window-rotate-upwards)
 
-    ;; VIEW
-    ;; "v" '("View" . (keymap))
-    ;; "v g" '("Git Diff Highlighting" . diff-hl-mode)
-    ;; "v l" '("Line numbers" . display-line-numbers-mode)
-    ;; "v t" '("Truncate lines" . toggle-truncate-lines)
-    ;; "v v" '("Visual line mode" . visual-line-mode)
+  ;; COMMAND
+  "x" '("Command" . (keymap))
+  "x x" '("Run Command" . counsel-M-x)
+  "x h" '("Command History" . counsel-command-history)
+  "x o" 'xdg-open
 
-    ;; WINDOWS
-    "w" '("Windows" . (keymap))
-    ;; Window splits
-    "w c" '("Close window" . evil-window-delete)
-    "w n" '("New window" . evil-window-new)
-    "w s" '("Horizontal split window" . evil-window-split)
-    "w v" '("Vertical split window" . evil-window-vsplit)
-    "w x" '("Kill buffer, close window" . kill-buffer-and-window)
-    ;; Window motions
-    "w h" '("Window left" . evil-window-left)
-    "w j" '("Window down" . evil-window-down)
-    "w k" '("Window up" . evil-window-up)
-    "w l" '("Window right" . evil-window-right)
-    "w w" '("Goto next window" . evil-window-next)
-    "w W" '("Goto previous window" . evil-window-prev)
-    ;; Move Windows
-    ;; "w H" '("Buffer move left" . buf-move-left)
-    ;; "w J" '("Buffer move down" . buf-move-down)
-    ;; "w K" '("Buffer move up" . buf-move-up)
-    ;; "w L" '("Buffer move right" . buf-move-right)
-
-    ;; COMMAND
-    "x" '("Command" . (keymap))
-    "x x" '("Run Command" . counsel-M-x)
-    "x h" '("Command History" . counsel-command-history)
-    "x o" 'xdg-open
-
-    "y" '("Yasnippet" . (keymap))
-    "y s" 'yas-insert-snippet
-    "y n" 'yas-new-snippet
-    "y f" 'yas-visit-snippet-file
-    ))
+  "y" '("Yasnippet" . (keymap))
+  "y y" '("Insert snippet" . yas-insert-snippet)
+  "y n" '("New snippet" . yas-new-snippet)
+  "y e" '("Edit snippet" . yas-visit-snippet-file)
+  )
 
 (keymap-global-set "C-S-n" #'make-frame)
 (keymap-global-set "C-S-w" #'delete-frame)
@@ -435,6 +333,7 @@ With \\[universal-argument] prefix: open the directory instead."
   :straight t
   :diminish yas-minor-mode
   :config (yas-reload-all)
+  (setopt yas-wrap-around-region t)
   :hook
   ((text-mode . yas-minor-mode)
    (prog-mode . yas-minor-mode)))
@@ -484,6 +383,30 @@ With \\[universal-argument] prefix: open the directory instead."
                                         ; else - flyspell is off, turn it on
     (flyspell-on-for-buffer-type)))
 
+(use-package ghostel
+  :straight t
+  :defer t
+  :config
+  (setopt ghostel-module-auto-install 'download)
+  (add-hook 'ghostel-mode-hook (lambda () (setq-local evil-lookup-func 'woman))))
+
+(use-package ghostel-eshell
+  :hook (eshell-load . ghostel-eshell-visual-command-mode))
+
+(use-package ghostel-comint
+  :hook (after-init . ghostel-comint-global-mode))
+
+(use-package evil-ghostel
+  :straight t
+  :after (ghostel evil)
+  :hook (ghostel-mode . evil-ghostel-mode))
+
+(my-leader-def
+  "t" '("Terminal" . (keymap))
+  "t t" 'ghostel
+  "t b" 'ghostel-list-buffers
+  )
+
 (use-package magit
 :straight t
 :commands magit-status)
@@ -524,6 +447,11 @@ With \\[universal-argument] prefix: open the directory instead."
 (add-hook 'text-mode-hook 'visual-line-mode)
 (add-hook 'text-mode-hook 'flyspell-mode)
 
+(use-package mixed-pitch
+  :straight t
+  :diminish
+  :hook text-mode)
+
 (use-package pdf-tools
   :straight t
   :mode ("\\.[pP][dD][fF]\\'" . pdf-view-mode)
@@ -532,12 +460,17 @@ With \\[universal-argument] prefix: open the directory instead."
   (add-hook 'pdf-view-mode-hook 'pdf-view-roll-minor-mode))
 
 (use-package org
+  :straight t
   :defer t
   :init
   ;; indent text according to outline structure.
-  (add-hook 'org-mode-hook 'org-indent-mode)
+  (add-hook 'org-mode-hook 'org-indent-mode -90)
   (add-hook 'org-indent-mode-hook
 	    (lambda () (diminish 'org-indent-mode)))
+
+  ;; Disable visual-wrap-prefix-mode (clashes with org-modern)
+  (add-hook 'org-mode-hook (lambda ()
+			     (visual-wrap-prefix-mode -1)) -90)
 
   ;; Auto-tangle
   (add-hook 'org-mode-hook (lambda ()
@@ -552,9 +485,10 @@ With \\[universal-argument] prefix: open the directory instead."
 	  org-hide-emphasis-markers t
 	  org-image-actual-width 400
 	  org-return-follows-link t
-	  org-imenu-depth 3
+	  org-imenu-depth 8
+	  org-ellipsis "…"
 	  org-highlight-latex-and-related '(latex script entities)
-	  org-format-latex-options (plist-put org-format-latex-options :scale 1.5))
+	  org-format-latex-options (plist-put org-format-latex-options :scale 1.0))
 
   ;; Default apps for opening attachments, links, etc.
   (setopt org-file-apps
@@ -564,6 +498,10 @@ With \\[universal-argument] prefix: open the directory instead."
             ("\\.x?html?\\'" . system)
 	    (t . system)
 	    (system . (lambda (path _) (xdg-open path)))))
+
+  ;; Todo settings
+  (setopt org-fontify-done-headline nil
+	  org-todo-keywords '((sequence "TODO" "WAIT" "|" "DONE" "CANCEL")))
 
   ;; Fix <return> commands
   (advice-add 'org-insert-heading :before (lambda (&rest _) (evil-insert 1)))
@@ -613,10 +551,11 @@ With \\[universal-argument] prefix: open the directory instead."
 	  org-export-with-todo-keywords nil)
 
   ;; OrgSrc evil keymap
-  (with-eval-after-load 'org-src
-    (evil-define-key 'normal 'org-src-mode-map
-      (kbd "Z Z") 'org-edit-src-exit
-      (kbd "Z Q") 'org-edit-src-abort)))
+  ;; (with-eval-after-load 'org-src
+  ;;   (evil-define-key 'normal org-src-mode-map
+  ;;     "ZZ" 'org-edit-src-exit
+  ;;     "ZQ" 'org-edit-src-abort))
+  )
 
 (use-package org-download
   :straight t
@@ -624,15 +563,41 @@ With \\[universal-argument] prefix: open the directory instead."
   :custom
   (org-download-method 'directory)
   (org-download-image-dir "./org-images")
-  (org-download-heading-lvl nil)
-  )
+  (org-download-heading-lvl nil))
 
 ;; Drag-and-drop to `dired`
-(add-hook 'dired-mode-hook 'org-download-enable)
+;; (add-hook 'dired-mode-hook 'org-download-enable)
 
-(use-package htmlize
+(use-package org-modern
   :straight t
-  :defer t)
+  :hook org-mode
+  :config
+  ;; Todo
+  (setopt org-modern-todo-faces '(("TODO" :background "#FF5555" :foreground "#282A36")
+				  ("WAIT" :background "#FFB86C" :foreground "#282A36")
+				  ("DONE" :background "#50FA7B" :foreground "#282A36")
+				  ("CANCEL" :background "#6272A4" :foreground "#F8F8F2")))
+
+  ;; Priority
+  (setopt org-modern-priority-faces '((?A :background "#FF5555" :foreground "#282A36")
+				      (?B :background "#FFB86C" :foreground "#282A36")
+				      (?C :background "#F1FA8C" :foreground "#282A36")))
+
+  ;; Tags
+  (set-face-background 'org-modern-tag "#8BE9FD")
+  (set-face-foreground 'org-modern-tag "#282A36")
+
+  ;; Progress
+  (setopt org-modern-progress 8)
+  (set-face-background 'org-modern-progress-incomplete "#6272A4")
+  (set-face-foreground 'org-modern-progress-incomplete "#F8F8F2")
+  (set-face-background 'org-modern-progress-complete "#50FA7B")
+  (set-face-foreground 'org-modern-progress-complete "#282A36"))
+
+(use-package org-modern-indent
+  :straight
+  (org-modern-indent :type git :host github :repo "jdtsmith/org-modern-indent")
+  :hook org-mode)
 
 (my-leader-def org-mode-map
   "c" '("Org mode" . (keymap))
@@ -712,6 +677,11 @@ With \\[universal-argument] prefix: open the directory instead."
 
   (add-hook 'TeX-mode-hook 'setup-latex-company-backends))
 
+(use-package bibtex
+  :defer t
+  :config
+  (add-hook 'bibtex-mode-hook 'auto-revert-mode))
+
 (use-package company-reftex
   :straight t
   :defer t)
@@ -777,8 +747,25 @@ With \\[universal-argument] prefix: open the directory instead."
   :ensure-system-package pandoc
   :mode ("README\\.md\\'" . gfm-mode)
   :init
-  (setq markdown-command "pandoc")
-  (setq markdown-enable-math t))
+  (setq markdown-command "pandoc"
+	markdown-enable-math t
+	markdown-hide-markup t))
+
+(use-package edit-indirect
+  :straight t
+  :defer t)
+
+(my-leader-def markdown-mode-map
+  "c" '("Markdown" . (keymap))
+
+  ;; Links and images
+  "c i" 'markdown-insert-image
+  "c l" 'markdown-insert-link
+
+  ;; Remap
+  "c c" `("Command" . ,(keymap-lookup markdown-mode-map "C-c C-c"))
+  "c s" `("Styling" . ,(keymap-lookup markdown-mode-map "C-c C-s"))
+  "c x" `("Toggle" . ,(keymap-lookup markdown-mode-map "C-c C-x")))
 
 (use-package highlight-indent-guides
   :diminish
@@ -862,3 +849,25 @@ With \\[universal-argument] prefix: open the directory instead."
   :after gptel
   :config (mapcar (apply-partially #'apply #'gptel-make-tool)
 		  (llm-tool-collection-get-all)))
+
+(defun opencode ()
+  (interactive)
+  (let* ((default-directory (or (projectile-project-root)
+				(projectile-completing-read "Select project: "
+							    projectile-known-projects)))
+	 (cmd (or (executable-find "opencode")
+		  (error "OpenCode not found")))
+	 (buf-name (concat "*OpenCode: " (projectile-project-name) "*"))
+	 (buf-exists (get-buffer buf-name)))
+    (switch-to-buffer-other-window buf-name)
+    (unless buf-exists
+      (ghostel-exec (get-buffer buf-name) cmd)
+      (setq-local ghostel-buffer-name-function nil)
+      (evil-local-set-key 'insert (kbd "C-x") 'ghostel--send-event))))
+
+(my-leader-def
+  "a" '("LLM" . (keymap))
+  "a a" 'gptel-menu
+  "a i" 'gptel
+  "a o" '("OpenCode" . opencode)
+  )
