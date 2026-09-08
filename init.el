@@ -755,17 +755,18 @@ With \\[universal-argument] prefix: open the directory instead."
   :straight t
   :defer t)
 
-(my-leader-def markdown-mode-map
-  "c" '("Markdown" . (keymap))
+(with-eval-after-load 'markdown-mode
+  (my-leader-def markdown-mode-map
+    "c" '("Markdown" . (keymap))
 
-  ;; Links and images
-  "c i" 'markdown-insert-image
-  "c l" 'markdown-insert-link
+    ;; Links and images
+    "c i" 'markdown-insert-image
+    "c l" 'markdown-insert-link
 
-  ;; Remap
-  "c c" `("Command" . ,(keymap-lookup markdown-mode-map "C-c C-c"))
-  "c s" `("Styling" . ,(keymap-lookup markdown-mode-map "C-c C-s"))
-  "c x" `("Toggle" . ,(keymap-lookup markdown-mode-map "C-c C-x")))
+    ;; Remap
+    "c c" `("Command" . ,(keymap-lookup markdown-mode-map "C-c C-c"))
+    "c s" `("Styling" . ,(keymap-lookup markdown-mode-map "C-c C-s"))
+    "c x" `("Toggle" . ,(keymap-lookup markdown-mode-map "C-c C-x"))))
 
 (use-package highlight-indent-guides
   :diminish
